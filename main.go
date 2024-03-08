@@ -1,0 +1,5 @@
+package spine
+
+func main() {
+
+}
