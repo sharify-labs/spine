@@ -1,71 +1,37 @@
 package security
 
 import (
+	"crypto/rand"
 	"crypto/sha512"
-	"crypto/subtle"
-	"encoding/base64"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
-	"github.com/posty/spine/config"
-	"github.com/posty/spine/models"
-	"strings"
+	"github.com/google/uuid"
 )
 
-const (
-	ApiKeyHeader string = "X-API-Key"
-)
-
-// ValidateUploadKey validates the UserID and Key of the request
-func ValidateUploadKey(c *fiber.Ctx) error {
-	key := c.Get(ApiKeyHeader, "")
-	unauthorized := c.Status(fiber.StatusUnauthorized).SendString("invalid key")
-
-	if strings.TrimSpace(key) == "" {
-		return unauthorized
-	}
-
-	// Check environment for API key
-	storedKey := models.Key{
-		Hash: config.GetStr("API_KEY"),
-		Salt: config.GetStr("SECRET"),
-	}
-
-	// Check if key is valid
-	isValid := validateKey(key, &storedKey)
-
-	if isValid {
-		log.Debug("Validated API key")
-		return c.Next() // user provided valid API key
-	}
-
-	return unauthorized
+type ZephyrKey struct {
+	Key  string
+	Salt []byte
+	Hash []byte
 }
 
-func validateKey(key string, storedKey *models.Key) bool {
-	var inputHash []byte
-
-	storedHash, err := base64.StdEncoding.DecodeString(storedKey.Hash)
+// NewZephyrKey generates a new upload key. Does NOT store it in database.
+func NewZephyrKey() *ZephyrKey {
+	key := uuid.NewString()
+	salt, err := generateSalt(16)
 	if err != nil {
-		log.Error("Error decoding stored hash")
-		return false
+		return nil
 	}
-
-	storedSalt, err := base64.StdEncoding.DecodeString(storedKey.Salt)
-	if err != nil {
-		log.Error("Error decoding stored salt")
-		return false
+	return &ZephyrKey{
+		Key:  key,
+		Salt: salt,
+		Hash: hashKey(key, salt),
 	}
+}
 
-	// Hash key with salt from database
-	inputHash = hashKey(key, storedSalt)
-
-	// Compare hashes
-	if subtle.ConstantTimeCompare(inputHash[:], storedHash[:]) == 1 {
-		return true
-	}
-	log.Info("Hashes don't match")
-
-	return false
+// generateSalt generates n bytes randomly and securely
+// using CSPRNG in the crypto/rand package
+func generateSalt(length int) ([]byte, error) {
+	salt := make([]byte, length)
+	_, err := rand.Read(salt)
+	return salt, err
 }
 
 // HashKey computes the SHA-512 hash of the key using the salt

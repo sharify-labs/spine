@@ -5,16 +5,19 @@ import (
 	goccy "github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	fiberlog "github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/database"
+	"github.com/posty/spine/middleware"
+	"github.com/posty/spine/router"
 	"log"
 )
 
 //go:embed assets/*
 var assets embed.FS
 
-func Run(version string) {
+func Start() {
 	// Load .env
 	err := godotenv.Load()
 	if err != nil {
@@ -29,17 +32,18 @@ func Run(version string) {
 
 	// Create app
 	app := fiber.New(fiber.Config{
-		AppName:                 "Zephyr v" + version,
+		AppName:                 "Spine",
 		ProxyHeader:             fiber.HeaderXForwardedFor,
 		BodyLimit:               100 * 1024 * 1024, // 100mb
 		JSONEncoder:             goccy.Marshal,
 		JSONDecoder:             goccy.Unmarshal,
 		EnableTrustedProxyCheck: true,
 		TrustedProxies:          config.GetTrustedProxies(assets),
+		Views:                   html.New("./views", ".html"),
 	})
 
-	// Connect to Database
-	database.ConnectDB()
+	// Setup databases
+	database.Setup()
 
 	// Setup middleware
 	middleware.Setup(app, assets)
@@ -48,7 +52,7 @@ func Run(version string) {
 	router.Setup(app)
 
 	// Send console message to alert Pterodactyl
-	log.Println("Started Zephyr v" + version)
+	log.Println("Started Spine")
 
 	// Start app
 	log.Fatal(app.Listen(":" + config.GetStr("PORT")))
