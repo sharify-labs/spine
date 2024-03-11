@@ -1,8 +1,10 @@
 package router
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/labstack/echo/v4"
 	"github.com/posty/spine/handlers"
+	mw "github.com/posty/spine/middleware"
+	"net/http"
 )
 
 const (
@@ -12,6 +14,7 @@ const (
 	RouteDiscordAuth         string = "/auth/discord"
 	RouteDiscordAuthCallback string = "/auth/discord/callback"
 
+	RouteDashboard   string = "/dashboard"
 	RouteListDomains string = "/api/list-domains"
 
 	RouteResetKey   string = "/api/reset-key/:user_id"
@@ -20,17 +23,19 @@ const (
 	RouteDeleteHost string = "/api/delete-host/:user_id/:hostname"
 )
 
-func Setup(a *fiber.App) {
-	a.Get(RouteHome, func(c *fiber.Ctx) error {
-		return c.Redirect(RouteLogin, fiber.StatusFound)
+func Setup(e *echo.Echo) {
+	e.GET(RouteHome, func(c echo.Context) error {
+		return c.Redirect(http.StatusFound, RouteLogin)
 	})
-	a.Get(RouteLogin, handlers.LoginHandler)
-	a.Get(RouteDiscordAuth, handlers.DiscordAuthHandler)
-	a.Get(RouteDiscordAuthCallback, handlers.DiscordAuthCallbackHandler)
-	a.Get(RouteListDomains, handlers.ListDomainsHandler)
-	a.Get(RouteResetKey, handlers.ResetKeyHandler) // This could be POST in the future. GET allows for easy testing.
-	a.Get(RouteListHosts, handlers.ListHostsHandler)
-	a.Get(RouteCreateHost, handlers.CreateHostHandler) // This could be POST in the future. GET allows for easy testing.
-	a.Get(RouteDeleteHost, handlers.DeleteHostHandler)
-	a.Use(func(c *fiber.Ctx) error { return c.SendStatus(fiber.StatusNotFound) })
+	e.GET(RouteLogin, handlers.LoginHandler)
+	e.GET(RouteDiscordAuth, handlers.DiscordAuthHandler)
+	e.GET(RouteDiscordAuthCallback, handlers.DiscordAuthCallbackHandler)
+
+	// Protected routes
+	e.GET(RouteDashboard, handlers.DashboardHandler, mw.IsAuthenticated)
+	e.GET(RouteListDomains, handlers.ListDomainsHandler, mw.IsAuthenticated)
+	e.GET(RouteResetKey, handlers.ResetKeyHandler, mw.IsAuthenticated) // This could be POST in the future. GET allows for easy testing.
+	e.GET(RouteListHosts, handlers.ListHostsHandler, mw.IsAuthenticated)
+	e.GET(RouteCreateHost, handlers.CreateHostHandler, mw.IsAuthenticated) // This could be POST in the future. GET allows for easy testing.
+	e.GET(RouteDeleteHost, handlers.DeleteHostHandler, mw.IsAuthenticated)
 }

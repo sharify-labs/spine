@@ -1,33 +1,53 @@
 package middleware
 
 import (
-	"embed"
-	"github.com/gofiber/contrib/fibersentry"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/posty/spine/database"
-	"time"
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
+	"github.com/labstack/echo/v4"
+	mw "github.com/labstack/echo/v4/middleware"
+	"github.com/markbates/goth/gothic"
+	"net/http"
+	"os"
 )
 
-func Setup(a *fiber.App, assets embed.FS) {
-	a.Use(
-		// Sentry.io middleware
-		fibersentry.New(fibersentry.Config{
-			Timeout: 3 * time.Second, WaitForDelivery: true},
-		),
+func Setup(e *echo.Echo) {
+	// Init Gothic for oAuth2
+	sessStore := sessions.NewCookieStore([]byte("secret")) // TODO: Secure this
+	gothic.Store = sessStore
+
+	// Init middleware
+	e.Use(
+		mw.Recover(),
 		// TODO: Favicon
-		//Logger middleware
-		logger.New(),
+		mw.LoggerWithConfig(mw.LoggerConfig{
+			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${remote_ip}) ${latency_human}\n",
+			Output: os.Stdout,
+		}),
+		session.Middleware(sessStore),
 	)
 }
 
-func RequiresAuth(c *fiber.Ctx) error {
-	sess, err := database.GetSession(c)
-	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+// IsAuthenticated is a middleware that checks if the user is logged in.
+func IsAuthenticated(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sess, _ := session.Get("session", c)
+		if sess.Values["discord_username"] == nil {
+			// If the user is not authenticated, redirect.
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		// If the session exists and is valid, proceed with the request.
+		return next(c)
 	}
-	if sess.Get("user_id") == nil {
-		return c.Redirect("/")
-	}
-	return c.Next()
 }
+
+//
+//func RequiresAuth(c echo.Context) error {
+//	sess, err := database.GetSession(c)
+//	if err != nil {
+//		return c.NoContent(http.StatusInternalServerError)
+//	}
+//	if sess.Get("user_id") == nil {
+//		return c.Redirect("/")
+//	}
+//	return c.Next()
+//}

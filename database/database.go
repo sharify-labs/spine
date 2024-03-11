@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/models"
 	"gorm.io/driver/mysql"
@@ -16,13 +14,11 @@ import (
 
 // db MySQL/MariaDB gorm connector
 var (
-	db       *gorm.DB
-	sessions *session.Store
+	db *gorm.DB
 )
 
 func Setup() {
 	connectSQL()
-	connectSessions()
 }
 
 func connectSQL() {
@@ -46,27 +42,17 @@ func connectSQL() {
 	}
 
 	// Migrations
-	if !fiber.IsChild() {
-		err = db.AutoMigrate(
-			&models.User{},
-			&models.Plan{},
-			&models.Domain{},
-			&models.Key{},
-			&models.Upload{},
-			&models.Host{},
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
+	err = db.AutoMigrate(
+		&models.User{},
+		&models.Plan{},
+		&models.Domain{},
+		&models.Key{},
+		&models.Upload{},
+		&models.Host{},
+	)
+	if err != nil {
+		log.Fatal(err)
 	}
-}
-
-func connectSessions() {
-	sessions = session.New()
-}
-
-func GetSession(c *fiber.Ctx) (*session.Session, error) {
-	return sessions.Get(c)
 }
 
 func InsertDomain(name string) error {
@@ -140,6 +126,17 @@ func GetAllHosts(userID string) ([]*models.Host, error) {
 		return nil, err
 	}
 	return hosts, nil
+}
+
+func GetOrCreateUser(email string) (*models.User, error) {
+	var user models.User
+	err := db.Where(&models.User{
+		Email: strings.TrimSpace(strings.ToLower(email)),
+	}).FirstOrCreate(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func UpdateUserKey(userID string, hash []byte, salt []byte) error {
