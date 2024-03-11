@@ -139,10 +139,17 @@ func GetOrCreateUser(email string) (*models.User, error) {
 	return &user, nil
 }
 
+// UpdateUserKey retrieves user and updates their upload-key.
+// TODO: Modify this so it's done in 1 query
 func UpdateUserKey(userID string, hash []byte, salt []byte) error {
-	return db.Save(&models.Key{
-		UserID: userID,
-		Hash:   base64.URLEncoding.EncodeToString(hash),
-		Salt:   base64.URLEncoding.EncodeToString(salt),
-	}).Error
+	key := models.Key{}
+	err := db.Where(&models.Key{UserID: userID}).First(&key).Error
+	if err != nil {
+		return err
+	}
+	fmt.Println("UserID: " + key.UserID)
+	key.Hash = base64.URLEncoding.EncodeToString(hash)
+	key.Salt = base64.URLEncoding.EncodeToString(salt)
+
+	return db.Save(&key).Error
 }

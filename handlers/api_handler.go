@@ -20,8 +20,9 @@ func DashboardHandler(c echo.Context) error {
 	if username == nil {
 		return c.Redirect(http.StatusFound, "/login")
 	}
+	userID := sess.Values["user_id"]
 
-	return c.HTML(http.StatusOK, `<div>Welcome to the dashboard, `+username.(string)+`!</div><form action="/generate-key" method="POST"><button type="submit">Generate Key</button></form>`)
+	return c.HTML(http.StatusOK, `<div>Welcome to the dashboard, `+username.(string)+`!</div><form action="/api/reset-key/`+userID.(string)+`" method="GET"><button type="submit">Generate Key</button></form>`)
 }
 
 // ResetKeyHandler refreshes an existing user's upload-key.
