@@ -4,38 +4,64 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/posty/spine/handlers"
 	mw "github.com/posty/spine/middleware"
-	"net/http"
 )
 
-const (
-	RouteHome  string = "/"
-	RouteLogin string = "/login"
-
-	RouteDiscordAuth         string = "/auth/discord"
-	RouteDiscordAuthCallback string = "/auth/discord/callback"
-
-	RouteDashboard   string = "/dashboard"
-	RouteListDomains string = "/api/list-domains"
-
-	RouteResetKey   string = "/api/reset-key/:user_id"
-	RouteListHosts  string = "/api/list-hosts/:user_id"
-	RouteCreateHost string = "/api/create-host/:user_id/:hostname"
-	RouteDeleteHost string = "/api/delete-host/:user_id/:hostname"
-)
-
+// Setup initializes all routes:
+//
+// Root:
+// GET     / -> handlers.RootHandler
+// GET     /login -> handlers.LoginHandler
+//
+// Auth:
+// GET     /auth/discord -> handlers.DiscordAuthHandler
+// GET     /auth/discord/callback -> handlers.DiscordAuthCallbackHandler
+//
+// Protected:
+// GET     /dashboard -> handlers.DashboardHandler
+// GET     /api/reset-token -> handlers.ResetTokenHandler
+// GET     /api/gallery -> handlers.GalleryHandler
+//
+// GET     /api/domains -> handlers.ListDomainsHandler
+// POST    /api/domains/:name -> handlers.CreateDomainHandler
+//
+// GET     /api/hosts -> handlers.ListHostsHandler
+// POST    /api/hosts/:name -> handlers.CreateHostHandler
+// DELETE  /api/hosts/:name -> handlers.DeleteHostHandler
 func Setup(e *echo.Echo) {
-	e.GET(RouteHome, func(c echo.Context) error {
-		return c.Redirect(http.StatusFound, RouteLogin)
-	})
-	e.GET(RouteLogin, handlers.LoginHandler)
-	e.GET(RouteDiscordAuth, handlers.DiscordAuthHandler)
-	e.GET(RouteDiscordAuthCallback, handlers.DiscordAuthCallbackHandler)
+	// Root routes
+	e.GET("/", handlers.RootHandler)
+	e.GET("/login", handlers.LoginHandler)
+	e.GET("/dashboard", handlers.DashboardHandler, mw.IsAuthenticated)
 
-	// Protected routes
-	e.GET(RouteDashboard, handlers.DashboardHandler, mw.IsAuthenticated)
-	e.GET(RouteListDomains, handlers.ListDomainsHandler, mw.IsAuthenticated)
-	e.GET(RouteResetKey, handlers.ResetKeyHandler, mw.IsAuthenticated) // This could be POST in the future. GET allows for easy testing.
-	e.GET(RouteListHosts, handlers.ListHostsHandler, mw.IsAuthenticated)
-	e.GET(RouteCreateHost, handlers.CreateHostHandler, mw.IsAuthenticated) // This could be POST in the future. GET allows for easy testing.
-	e.GET(RouteDeleteHost, handlers.DeleteHostHandler, mw.IsAuthenticated)
+	// Auth routes
+	auth := e.Group("auth")
+	{
+		discord := auth.Group("discord")
+		{
+			discord.GET("/", handlers.DiscordAuthHandler)
+			discord.GET("/callback", handlers.DiscordAuthCallbackHandler)
+		}
+	}
+
+	// API routes
+	api := e.Group("/api", mw.IsAuthenticated)
+	{
+		api.GET("/reset-token", handlers.ResetTokenHandler)
+		api.GET("/gallery", handlers.GalleryHandler)
+
+		domains := api.Group("/domains")
+		{
+			domains.GET("/", handlers.ListDomainsHandler)
+			domains.POST("/:name", handlers.CreateDomainHandler)
+			//domains.DELETE("/:name". handlers.DeleteDomainHandler)
+		}
+
+		hosts := api.Group("/hosts")
+		{
+			hosts.GET("/", handlers.ListHostsHandler)
+			hosts.POST("/:name", handlers.CreateHostHandler)
+			hosts.DELETE("/:name", handlers.DeleteHostHandler)
+		}
+	}
+
 }

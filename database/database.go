@@ -46,7 +46,7 @@ func connectSQL() {
 		&models.User{},
 		&models.Plan{},
 		&models.Domain{},
-		&models.Key{},
+		&models.Token{},
 		&models.Upload{},
 		&models.Host{},
 	)
@@ -66,7 +66,6 @@ func GetDomain(name string) (*models.Domain, error) {
 	err := db.Where(&models.Domain{
 		Name: strings.ToLower(strings.TrimSpace(name))}).First(&domain).Error
 	if err != nil {
-		log.Println("failed to find domain")
 		return nil, err
 	}
 	return &domain, nil
@@ -128,6 +127,15 @@ func GetAllHosts(userID string) ([]*models.Host, error) {
 	return hosts, nil
 }
 
+func GetUserUploads(userID string) ([]*models.Upload, error) {
+	var uploads []*models.Upload
+	err := db.Where(&models.Upload{UserID: userID}).Find(&uploads).Error
+	if err != nil {
+		return nil, err
+	}
+	return uploads, nil
+}
+
 func GetOrCreateUser(email string) (*models.User, error) {
 	var user models.User
 	err := db.Where(&models.User{
@@ -139,17 +147,16 @@ func GetOrCreateUser(email string) (*models.User, error) {
 	return &user, nil
 }
 
-// UpdateUserKey retrieves user and updates their upload-key.
+// UpdateUserToken retrieves user and updates their upload-key.
 // TODO: Modify this so it's done in 1 query
-func UpdateUserKey(userID string, hash []byte, salt []byte) error {
-	key := models.Key{}
-	err := db.Where(&models.Key{UserID: userID}).First(&key).Error
+func UpdateUserToken(userID string, hash []byte, salt []byte) error {
+	token := models.Token{}
+	err := db.Where(&models.Token{UserID: userID}).FirstOrCreate(&token).Error
 	if err != nil {
 		return err
 	}
-	fmt.Println("UserID: " + key.UserID)
-	key.Hash = base64.URLEncoding.EncodeToString(hash)
-	key.Salt = base64.URLEncoding.EncodeToString(salt)
+	token.Hash = base64.URLEncoding.EncodeToString(hash)
+	token.Salt = base64.URLEncoding.EncodeToString(salt)
 
-	return db.Save(&key).Error
+	return db.Save(&token).Error
 }

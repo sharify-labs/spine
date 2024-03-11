@@ -53,7 +53,3 @@ func DiscordAuthCallbackHandler(c echo.Context) error {
 
 	return c.Redirect(http.StatusFound, "/dashboard")
 }
-
-func LoginHandler(c echo.Context) error {
-	return c.HTML(http.StatusOK, `<a href="/auth/discord">Login with Discord</a>`)
-}

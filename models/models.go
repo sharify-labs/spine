@@ -15,8 +15,8 @@ type Upload struct {
 	User       User   // required for M-1 relationship (I think)
 }
 
-// Key represents a User's upload key.
-type Key struct {
+// Token represents a User's upload token.
+type Token struct {
 	gorm.Model
 	ID     uint   `gorm:"primaryKey;autoIncrement"`
 	Hash   string `gorm:"unique;not null"`
@@ -42,12 +42,11 @@ type Domain struct {
 //	"user_id": "c99e9b2c-f04b-421e-b4a5-8120d2513b93"
 type Host struct {
 	gorm.Model
-	ID     uint   `gorm:"primaryKey;autoincrement"`
-	Full   string // (Host.Sub + Host.Root) or (Host.Sub + Domain.Name)
+	ID     uint `gorm:"primaryKey;autoincrement"`
 	Sub    string
-	Root   string `gorm:"index"` // fk -> Domain.Name
+	Root   string `gorm:"index"`
+	Full   string // (Host.Sub + Host.Root) or (Host.Sub + Domain.Name)
 	UserID string `gorm:"index"` // fk -> User.ID  (I don't know why but "index" tags required for fk to work)
-	Domain Domain `gorm:"foreignKey:Root;references:Name"`
 	User   User   // required for M-1 relationship (I think)
 }
 
@@ -63,7 +62,7 @@ type User struct {
 	Email   string `gorm:"unique;not null"`
 	PlanID  *uint  // temp nullable
 	Plan    *Plan  // temp nullable
-	Key     Key
+	Token   Token
 	Hosts   []Host
 	Uploads []Upload
 }

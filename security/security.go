@@ -6,23 +6,23 @@ import (
 	"github.com/google/uuid"
 )
 
-type ZephyrKey struct {
-	Key  string
-	Salt []byte
-	Hash []byte
+type ZephyrToken struct {
+	Value string
+	Salt  []byte
+	Hash  []byte
 }
 
-// NewZephyrKey generates a new upload key. Does NOT store it in database.
-func NewZephyrKey() *ZephyrKey {
-	key := uuid.NewString()
+// NewZephyrToken generates a new upload token. Does NOT store it in database.
+func NewZephyrToken() *ZephyrToken {
+	value := uuid.NewString()
 	salt, err := generateSalt(16)
 	if err != nil {
 		return nil
 	}
-	return &ZephyrKey{
-		Key:  key,
-		Salt: salt,
-		Hash: hashKey(key, salt),
+	return &ZephyrToken{
+		Value: value,
+		Salt:  salt,
+		Hash:  hashToken(value, salt),
 	}
 }
 
@@ -34,14 +34,14 @@ func generateSalt(length int) ([]byte, error) {
 	return salt, err
 }
 
-// HashKey computes the SHA-512 hash of the key using the salt
-func hashKey(key string, salt []byte) []byte {
-	keyBytes := []byte(key)
+// hashToken computes the SHA-512 hash of the token using the salt
+func hashToken(value string, salt []byte) []byte {
+	tokenBytes := []byte(value)
 	hasher := sha512.New()
 
-	// Append salt to key
-	keyBytes = append(keyBytes, salt...)
-	hasher.Write(keyBytes)
+	// Append salt to token
+	tokenBytes = append(tokenBytes, salt...)
+	hasher.Write(tokenBytes)
 
 	// Generate SHA512 hash
 	return hasher.Sum(nil)

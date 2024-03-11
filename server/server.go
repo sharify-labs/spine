@@ -24,7 +24,6 @@ var assets embed.FS
 
 func Start() {
 	// Load .env
-
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
@@ -35,14 +34,11 @@ func Start() {
 	// Set Log Level for Fiber
 	//fiberlog.SetLevel(fiberlog.Level(config.GetInt("LOG_LEVEL")))
 	//fiber.Config{
-	//	AppName:                 "Spine",
 	//	ProxyHeader:             fiber.HeaderXForwardedFor,
-	//	BodyLimit:               100 * 1024 * 1024, // 100mb
 	//	JSONEncoder:             goccy.Marshal,
 	//	JSONDecoder:             goccy.Unmarshal,
 	//	EnableTrustedProxyCheck: true,
 	//	TrustedProxies:          config.GetTrustedProxies(assets),
-	//	Views:                   html.New("./views", ".html"),
 	//}
 
 	// Create app

@@ -1,50 +1,76 @@
 package handlers
 
 import (
+	"bytes"
+	"github.com/goccy/go-json"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/dto"
 	"github.com/posty/spine/security"
+	"io"
 	"net/http"
-	"strings"
 )
 
-func DashboardHandler(c echo.Context) error {
-	sess, err := session.Get("session", c)
-	if err != nil {
-		return c.Redirect(http.StatusFound, "/login")
-	}
-	username := sess.Values["discord_username"]
-	if username == nil {
-		return c.Redirect(http.StatusFound, "/login")
-	}
-	userID := sess.Values["user_id"]
-
-	return c.HTML(http.StatusOK, `<div>Welcome to the dashboard, `+username.(string)+`!</div><form action="/api/reset-key/`+userID.(string)+`" method="GET"><button type="submit">Generate Key</button></form>`)
+func getUserID(c echo.Context) string {
+	sess, _ := session.Get("session", c)
+	return sess.Values["user_id"].(string)
 }
 
-// ResetKeyHandler refreshes an existing user's upload-key.
-func ResetKeyHandler(c echo.Context) error {
-	userID := strings.TrimSpace(c.Param("user_id"))
-	if userID == "" {
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	key := security.NewZephyrKey()
-	if key == nil {
+// ResetTokenHandler refreshes an existing user's upload-key.
+func ResetTokenHandler(c echo.Context) error {
+	userID := getUserID(c)
+	token := security.NewZephyrToken()
+	if token == nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if err := database.UpdateUserKey(userID, key.Hash, key.Salt); err != nil {
+	if err := database.UpdateUserToken(userID, token.Hash, token.Salt); err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		config.UserHeader: userID,
-		config.KeyHeader:  key.Key,
+		config.UserHeader:  userID,
+		config.TokenHeader: token.Value,
 	})
+}
+
+func GalleryHandler(c echo.Context) error {
+	userID := getUserID(c)
+	if userID == "" {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	uploads, err := database.GetUserUploads(userID)
+	if err != nil {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	var storeKeys []string
+	for _, u := range uploads {
+		storeKeys = append(storeKeys, u.StorageKey)
+	}
+
+	rqBody, err := json.Marshal(storeKeys)
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	url := "http://localhost:3001/api/uploads/" + userID + "?key=" + config.GetStr("CANVAS_API_KEY")
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(rqBody))
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	var base64Images []string
+	if err = json.Unmarshal(respBody, &base64Images); err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.JSON(http.StatusOK, base64Images)
 }
 
 // ListDomainsHandler returns a JSON array of all available root domain names.
@@ -62,11 +88,7 @@ func ListDomainsHandler(c echo.Context) error {
 
 // ListHostsHandler returns a JSON array of all hosts registered by a given user.
 func ListHostsHandler(c echo.Context) error {
-	userID := strings.TrimSpace(c.Param("user_id"))
-	if userID == "" {
-		return c.NoContent(http.StatusBadRequest)
-	}
-
+	userID := getUserID(c)
 	hosts, err := database.GetAllHosts(userID)
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
@@ -78,17 +100,26 @@ func ListHostsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, names)
 }
 
+func CreateDomainHandler(c echo.Context) error {
+	domain := c.Param("name")
+	err := database.InsertDomain(domain)
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	return c.NoContent(http.StatusOK)
+}
+
 // CreateHostHandler creates new hosts for a user.
 // Root domain of hostname must be registered first. This can be checked with ListDomainsHandler.
 func CreateHostHandler(c echo.Context) error {
-	hostname := c.Param("hostname")
+	hostname := c.Param("name")
 	host := dto.NewHost(hostname)
 	if host == nil {
 		// Hostname does not meet format requirements. Should prob be validated on frontend too.
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	userID := strings.TrimSpace(c.Param("user_id"))
+	userID := getUserID(c)
 	err := database.InsertHost(userID, host.Sub, host.Root)
 	if err != nil {
 		// Unable to create host in DB. Maybe root domain doesn't exist, or user doesn't exist, or something else.
@@ -102,11 +133,8 @@ func CreateHostHandler(c echo.Context) error {
 
 // DeleteHostHandler deletes a registered hostname.
 func DeleteHostHandler(c echo.Context) error {
-	hostname := strings.TrimSpace(c.Param("hostname"))
-	if hostname == "" {
-		return c.NoContent(http.StatusBadRequest)
-	}
-	userID := strings.TrimSpace(c.Param("user_id"))
+	hostname := c.Param("name")
+	userID := getUserID(c)
 	err := database.DeleteHost(userID, hostname)
 	if err != nil {
 		// Unable to create host in DB. Maybe root domain doesn't exist, or user doesn't exist, or something else.

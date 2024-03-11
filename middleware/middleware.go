@@ -18,7 +18,7 @@ func Setup(e *echo.Echo) {
 	// Init middleware
 	e.Use(
 		mw.Recover(),
-		// TODO: Favicon
+		mw.BodyLimit("100M"),
 		mw.LoggerWithConfig(mw.LoggerConfig{
 			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${remote_ip}) ${latency_human}\n",
 			Output: os.Stdout,
@@ -30,24 +30,13 @@ func Setup(e *echo.Echo) {
 // IsAuthenticated is a middleware that checks if the user is logged in.
 func IsAuthenticated(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sess, _ := session.Get("session", c)
-		if sess.Values["discord_username"] == nil {
+		sess, err := session.Get("session", c)
+		if err != nil || sess.Values["discord_username"] == nil {
 			// If the user is not authenticated, redirect.
 			return c.Redirect(http.StatusFound, "/login")
 		}
+
 		// If the session exists and is valid, proceed with the request.
 		return next(c)
 	}
 }
-
-//
-//func RequiresAuth(c echo.Context) error {
-//	sess, err := database.GetSession(c)
-//	if err != nil {
-//		return c.NoContent(http.StatusInternalServerError)
-//	}
-//	if sess.Get("user_id") == nil {
-//		return c.Redirect("/")
-//	}
-//	return c.Next()
-//}
