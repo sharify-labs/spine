@@ -29,16 +29,16 @@ import (
 // DELETE  /api/hosts/:name -> handlers.DeleteHostHandler
 func Setup(e *echo.Echo) {
 	// Root routes
-	e.GET("/", handlers.RootHandler)
+	e.GET("", handlers.RootHandler)
 	e.GET("/login", handlers.LoginHandler)
 	e.GET("/dashboard", handlers.DashboardHandler, mw.IsAuthenticated)
 
 	// Auth routes
-	auth := e.Group("auth")
+	auth := e.Group("/auth")
 	{
-		discord := auth.Group("discord")
+		discord := auth.Group("/discord")
 		{
-			discord.GET("/", handlers.DiscordAuthHandler)
+			discord.GET("", handlers.DiscordAuthHandler)
 			discord.GET("/callback", handlers.DiscordAuthCallbackHandler)
 		}
 	}
@@ -51,14 +51,14 @@ func Setup(e *echo.Echo) {
 
 		domains := api.Group("/domains")
 		{
-			domains.GET("/", handlers.ListDomainsHandler)
+			domains.GET("", handlers.ListDomainsHandler)
 			domains.POST("/:name", handlers.CreateDomainHandler)
 			//domains.DELETE("/:name". handlers.DeleteDomainHandler)
 		}
 
 		hosts := api.Group("/hosts")
 		{
-			hosts.GET("/", handlers.ListHostsHandler)
+			hosts.GET("", handlers.ListHostsHandler)
 			hosts.POST("/:name", handlers.CreateHostHandler)
 			hosts.DELETE("/:name", handlers.DeleteHostHandler)
 		}
