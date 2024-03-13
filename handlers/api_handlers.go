@@ -9,6 +9,7 @@ import (
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/dto"
 	"github.com/posty/spine/security"
+	"github.com/posty/spine/services"
 	"io"
 	"net/http"
 )
@@ -54,7 +55,7 @@ func GalleryHandler(c echo.Context) error {
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	url := "http://localhost:3001/api/uploads/" + userID + "?key=" + config.GetStr("CANVAS_API_KEY")
+	url := "https://ejl.me/api/uploads/" + userID + "?key=" + config.GetStr("CANVAS_API_KEY")
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(rqBody))
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
@@ -110,7 +111,7 @@ func CreateDomainHandler(c echo.Context) error {
 }
 
 // CreateHostHandler creates new hosts for a user.
-// Root domain of hostname must be registered first. This can be checked with ListDomainsHandler.
+// Root domain must be registered first. This can be checked with ListDomainsHandler.
 func CreateHostHandler(c echo.Context) error {
 	hostname := c.Param("name")
 	host := dto.NewHost(hostname)
@@ -120,7 +121,14 @@ func CreateHostHandler(c echo.Context) error {
 	}
 
 	userID := getUserID(c)
-	err := database.InsertHost(userID, host.Sub, host.Root)
+	// Add to Cloudflare
+	err := services.CreateCNAME(userID, host.Sub, host.Root)
+	if err != nil {
+		c.Logger().Errorf("failed to create CNAME(%s, %s, %s): %v", userID, host.Sub, host.Root, err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	// Add to Database
+	err = database.InsertHost(userID, host.Sub, host.Root)
 	if err != nil {
 		// Unable to create host in DB. Maybe root domain doesn't exist, or user doesn't exist, or something else.
 		return c.NoContent(http.StatusBadRequest)

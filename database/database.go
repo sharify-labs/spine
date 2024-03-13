@@ -8,7 +8,6 @@ import (
 	"github.com/posty/spine/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
 	"strings"
 )
 
@@ -38,7 +37,7 @@ func connectSQL() {
 		&gorm.Config{TranslateError: true},
 	)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	// Migrations
@@ -51,7 +50,7 @@ func connectSQL() {
 		&models.Host{},
 	)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 

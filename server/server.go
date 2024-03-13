@@ -11,6 +11,7 @@ import (
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/middleware"
 	"github.com/posty/spine/router"
+	"github.com/posty/spine/services"
 	"log"
 	"net/http"
 )
@@ -25,7 +26,7 @@ var assets embed.FS
 func Start() {
 	// Load .env
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		panic(err)
 	}
 
 	// Initialize Sentry
@@ -62,6 +63,9 @@ func Start() {
 	// Setup databases
 	database.Setup()
 
+	// Setup services
+	services.Setup()
+
 	// Setup middleware
 	middleware.Setup(e)
 
@@ -73,7 +77,7 @@ func Start() {
 
 	// Start app
 	if err := e.Start(":" + config.GetStr("PORT")); !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
