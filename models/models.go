@@ -51,7 +51,13 @@ type Host struct {
 }
 
 func (ud *Host) BeforeCreate(_ *gorm.DB) (err error) {
-	ud.Full = strings.ToLower(ud.Sub + "." + ud.Root)
+	sub := strings.TrimSpace(strings.ToLower(ud.Sub))
+	root := strings.TrimSpace(strings.ToLower(ud.Root))
+	if sub == "" {
+		ud.Full = root
+	} else {
+		ud.Full = sub + "." + root
+	}
 	return
 }
 
