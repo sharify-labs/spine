@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"fmt"
 	"github.com/cloudflare/cloudflare-go"
 	"github.com/posty/spine/config"
 )
@@ -31,13 +32,30 @@ func (cf *cfClient) Connect() {
 }
 
 func (cf *cfClient) CreateCNAME(userID string, sub string, root string) (string, error) {
+	// Verify if root domain is in list of available domains
+	domains, err := cf.AvailableDomains()
+	if err != nil {
+		return "", err
+	}
+
+	rootIsAvailable := false
+	for _, d := range domains {
+		if d == root {
+			rootIsAvailable = true
+			break
+		}
+	}
+	if !rootIsAvailable {
+		return "", fmt.Errorf("root %s is not on CF or is missing comment (%s)", root, AvailableDomainComment)
+	}
+
 	zoneID, err := cf.api.ZoneIDByName(root)
 	if err != nil {
 		return "", err
 	}
 
 	record, err := cf.api.CreateDNSRecord(
-		context.Background(),
+		context.TODO(),
 		cloudflare.ZoneIdentifier(zoneID),
 		cloudflare.CreateDNSRecordParams{
 			Type:    "CNAME",
