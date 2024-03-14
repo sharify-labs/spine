@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func DiscordAuthHandler(c echo.Context) error {
+func DiscordAuth(c echo.Context) error {
 	q := c.Request().URL.Query()
 	q.Add("provider", "discord")
 	c.Request().URL.RawQuery = q.Encode()
@@ -18,7 +18,7 @@ func DiscordAuthHandler(c echo.Context) error {
 	return nil
 }
 
-func DiscordAuthCallbackHandler(c echo.Context) error {
+func DiscordAuthCallback(c echo.Context) error {
 	q := c.Request().URL.Query()
 	q.Add("provider", "discord")
 	c.Request().URL.RawQuery = q.Encode()

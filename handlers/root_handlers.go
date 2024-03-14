@@ -6,15 +6,15 @@ import (
 	"net/http"
 )
 
-func RootHandler(c echo.Context) error {
+func Root(c echo.Context) error {
 	return c.Redirect(http.StatusFound, "/login")
 }
 
-func LoginHandler(c echo.Context) error {
+func Login(c echo.Context) error {
 	return c.HTML(http.StatusOK, `<a href="/auth/discord">Login with Discord</a>`)
 }
 
-func DashboardHandler(c echo.Context) error {
+func DisplayDashboard(c echo.Context) error {
 	sess, _ := session.Get("session", c)
 
 	username := sess.Values["discord_username"]
@@ -27,11 +27,6 @@ func DashboardHandler(c echo.Context) error {
         <form action="/api/reset-token" method="GET"><button type="submit">Generate Key</button></form>
         <button id="galleryButton">Gallery</button>
         <div id="gallery"></div>
-        <div>
-            <label for="addDomain">Add domain:</label>
-            <input type="text" id="addDomain" name="addDomain">
-            <button onclick="addDomain()">Submit</button>
-        </div>
         <div>
             <label for="addHost">Add host:</label>
             <input type="text" id="addHost" name="addHost">
@@ -57,17 +52,6 @@ func DashboardHandler(c echo.Context) error {
                     });
                 });
             });
-
-            function addDomain() {
-                var domainName = document.getElementById("addDomain").value;
-                fetch("/api/domains/" + domainName, {
-                    method: "POST",
-                }).then(function(response) {
-                    return response.json();
-                }).then(function(data) {
-                    console.log(data);
-                });
-            }
 
             function addHost() {
                 var hostName = document.getElementById("addHost").value;

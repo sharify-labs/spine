@@ -19,8 +19,8 @@ func getUserID(c echo.Context) string {
 	return sess.Values["user_id"].(string)
 }
 
-// ResetTokenHandler refreshes an existing user's upload-key.
-func ResetTokenHandler(c echo.Context) error {
+// ResetToken refreshes an existing user's upload-key.
+func ResetToken(c echo.Context) error {
 	userID := getUserID(c)
 	token := security.NewZephyrToken()
 	if token == nil {
@@ -37,7 +37,7 @@ func ResetTokenHandler(c echo.Context) error {
 	})
 }
 
-func GalleryHandler(c echo.Context) error {
+func DisplayGallery(c echo.Context) error {
 	userID := getUserID(c)
 	if userID == "" {
 		return c.NoContent(http.StatusBadRequest)
@@ -74,10 +74,10 @@ func GalleryHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, base64Images)
 }
 
-// ListAvailableDomainsHandler returns a JSON array of all available root domain names.
+// ListAvailableDomains returns a JSON array of all available root domain names.
 // Domains are fetched from Cloudflare on each request.
 // TODO: Cache this in Redis (12-24 hours sounds reasonable)
-func ListAvailableDomainsHandler(c echo.Context) error {
+func ListAvailableDomains(c echo.Context) error {
 	domains, err := clients.Cloudflare.AvailableDomains()
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
@@ -85,8 +85,8 @@ func ListAvailableDomainsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, domains)
 }
 
-// ListHostsHandler returns a JSON array of all hosts registered by a given user.
-func ListHostsHandler(c echo.Context) error {
+// ListHosts returns a JSON array of all hosts registered by a given user.
+func ListHosts(c echo.Context) error {
 	userID := getUserID(c)
 	hosts, err := database.GetAllHosts(userID)
 	if err != nil {
@@ -99,9 +99,9 @@ func ListHostsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, names)
 }
 
-// CreateHostHandler creates new hosts for a user.
+// CreateHost creates new hosts for a user.
 // Root domain must be registered first. This can be checked with ListDomainsHandler.
-func CreateHostHandler(c echo.Context) error {
+func CreateHost(c echo.Context) error {
 	hostname := c.Param("name")
 	userID := getUserID(c)
 
@@ -124,8 +124,8 @@ func CreateHostHandler(c echo.Context) error {
 	})
 }
 
-// DeleteHostHandler deletes a registered hostname.
-func DeleteHostHandler(c echo.Context) error {
+// DeleteHost deletes a registered hostname.
+func DeleteHost(c echo.Context) error {
 	hostname := c.Param("name")
 	userID := getUserID(c)
 

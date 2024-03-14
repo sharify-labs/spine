@@ -9,56 +9,53 @@ import (
 // Setup initializes all routes:
 //
 // Root:
-// GET     / -> handlers.RootHandler
-// GET     /login -> handlers.LoginHandler
+// GET     / -> handlers.Root
+// GET     /login -> handlers.Login
 //
 // Auth:
-// GET     /auth/discord -> handlers.DiscordAuthHandler
-// GET     /auth/discord/callback -> handlers.DiscordAuthCallbackHandler
+// GET     /auth/discord -> handlers.DiscordAuth
+// GET     /auth/discord/callback -> handlers.DiscordAuthCallback
 //
 // Protected:
-// GET     /dashboard -> handlers.DashboardHandler
-// GET     /api/reset-token -> handlers.ResetTokenHandler
-// GET     /api/gallery -> handlers.GalleryHandler
+// GET     /dashboard -> handlers.DisplayDashboard
+// GET     /api/reset-token -> handlers.ResetToken
+// GET     /api/gallery -> handlers.DisplayGallery
 //
-// GET     /api/domains -> handlers.ListDomainsHandler
-// POST    /api/domains/:name -> handlers.CreateDomainHandler
-//
-// GET     /api/hosts -> handlers.ListHostsHandler
-// POST    /api/hosts/:name -> handlers.CreateHostHandler
-// DELETE  /api/hosts/:name -> handlers.DeleteHostHandler
+// GET     /api/hosts -> handlers.ListHosts
+// POST    /api/hosts/:name -> handlers.CreateHost
+// DELETE  /api/hosts/:name -> handlers.DeleteHost
 func Setup(e *echo.Echo) {
 	// Root routes
-	e.GET("", handlers.RootHandler)
-	e.GET("/login", handlers.LoginHandler)
-	e.GET("/dashboard", handlers.DashboardHandler, mw.IsAuthenticated)
+	e.GET("", handlers.Root)
+	e.GET("/login", handlers.Login)
+	e.GET("/dashboard", handlers.DisplayDashboard, mw.IsAuthenticated)
 
 	// Auth routes
 	auth := e.Group("/auth")
 	{
 		discord := auth.Group("/discord")
 		{
-			discord.GET("", handlers.DiscordAuthHandler)
-			discord.GET("/callback", handlers.DiscordAuthCallbackHandler)
+			discord.GET("", handlers.DiscordAuth)
+			discord.GET("/callback", handlers.DiscordAuthCallback)
 		}
 	}
 
 	// API routes
 	api := e.Group("/api", mw.IsAuthenticated)
 	{
-		api.GET("/reset-token", handlers.ResetTokenHandler)
-		api.GET("/gallery", handlers.GalleryHandler)
+		api.GET("/reset-token", handlers.ResetToken)
+		api.GET("/gallery", handlers.DisplayGallery)
 
 		domains := api.Group("/domains")
 		{
-			domains.GET("", handlers.ListAvailableDomainsHandler)
+			domains.GET("", handlers.ListAvailableDomains)
 		}
 
 		hosts := api.Group("/hosts")
 		{
-			hosts.GET("", handlers.ListHostsHandler)
-			hosts.POST("/:name", handlers.CreateHostHandler)
-			hosts.DELETE("/:name", handlers.DeleteHostHandler)
+			hosts.GET("", handlers.ListHosts)
+			hosts.POST("/:name", handlers.CreateHost)
+			hosts.DELETE("/:name", handlers.DeleteHost)
 		}
 	}
 
