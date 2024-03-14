@@ -5,9 +5,9 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	"github.com/posty/spine/clients"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/database"
-	"github.com/posty/spine/dto"
 	"github.com/posty/spine/security"
 	"github.com/posty/spine/services"
 	"io"
@@ -74,17 +74,15 @@ func GalleryHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, base64Images)
 }
 
-// ListDomainsHandler returns a JSON array of all available root domain names.
-func ListDomainsHandler(c echo.Context) error {
-	domains, err := database.GetDomainsAvailable()
+// ListAvailableDomainsHandler returns a JSON array of all available root domain names.
+// Domains are fetched from Cloudflare on each request.
+// TODO: Cache this in Redis (12-24 hours sounds reasonable)
+func ListAvailableDomainsHandler(c echo.Context) error {
+	domains, err := clients.Cloudflare.AvailableDomains()
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	var names []string
-	for _, domain := range domains {
-		names = append(names, domain.Name)
-	}
-	return c.JSON(http.StatusOK, names)
+	return c.JSON(http.StatusOK, domains)
 }
 
 // ListHostsHandler returns a JSON array of all hosts registered by a given user.
@@ -101,38 +99,25 @@ func ListHostsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, names)
 }
 
-func CreateDomainHandler(c echo.Context) error {
-	domain := c.Param("name")
-	err := database.InsertDomain(domain)
-	if err != nil {
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	return c.NoContent(http.StatusOK)
-}
-
 // CreateHostHandler creates new hosts for a user.
 // Root domain must be registered first. This can be checked with ListDomainsHandler.
 func CreateHostHandler(c echo.Context) error {
 	hostname := c.Param("name")
-	host := dto.NewHost(hostname)
+	userID := getUserID(c)
+
+	host := services.NewHostDTO(hostname, userID)
 	if host == nil {
 		// Hostname does not meet format requirements. Should prob be validated on frontend too.
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	userID := getUserID(c)
-	// Add to Cloudflare
-	err := services.CreateCNAME(userID, host.Sub, host.Root)
+	// Publish host (add to Cloudflare & Database)
+	err := host.Register()
 	if err != nil {
 		c.Logger().Errorf("failed to create CNAME(%s, %s, %s): %v", userID, host.Sub, host.Root, err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	// Add to Database
-	err = database.InsertHost(userID, host.Sub, host.Root)
-	if err != nil {
-		// Unable to create host in DB. Maybe root domain doesn't exist, or user doesn't exist, or something else.
-		return c.NoContent(http.StatusBadRequest)
-	}
+
 	return c.JSON(http.StatusOK, echo.Map{
 		config.UserHeader: userID,
 		config.HostHeader: host.Full,
@@ -143,10 +128,13 @@ func CreateHostHandler(c echo.Context) error {
 func DeleteHostHandler(c echo.Context) error {
 	hostname := c.Param("name")
 	userID := getUserID(c)
-	err := database.DeleteHost(userID, hostname)
-	if err != nil {
-		// Unable to create host in DB. Maybe root domain doesn't exist, or user doesn't exist, or something else.
-		return c.NoContent(http.StatusBadRequest)
+
+	if host := services.NewHostDTO(hostname, userID); host != nil {
+		if err := host.Delete(); err != nil {
+			c.Logger().Errorf("error deleting host: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		return c.NoContent(http.StatusOK)
 	}
-	return c.NoContent(http.StatusOK)
+	return c.NoContent(http.StatusBadRequest)
 }

@@ -51,9 +51,7 @@ func Setup(e *echo.Echo) {
 
 		domains := api.Group("/domains")
 		{
-			domains.GET("", handlers.ListDomainsHandler)
-			domains.POST("/:name", handlers.CreateDomainHandler)
-			//domains.DELETE("/:name". handlers.DeleteDomainHandler)
+			domains.GET("", handlers.ListAvailableDomainsHandler)
 		}
 
 		hosts := api.Group("/hosts")

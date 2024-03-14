@@ -2,7 +2,6 @@ package database
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/models"
@@ -44,7 +43,6 @@ func connectSQL() {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Plan{},
-		&models.Domain{},
 		&models.Token{},
 		&models.Upload{},
 		&models.Host{},
@@ -54,56 +52,8 @@ func connectSQL() {
 	}
 }
 
-func InsertDomain(name string) error {
-	return db.Create(&models.Domain{
-		Name: strings.ToLower(strings.TrimSpace(name)),
-	}).Error
-}
-
-func GetDomain(name string) (*models.Domain, error) {
-	var domain models.Domain
-	err := db.Where(&models.Domain{
-		Name: strings.ToLower(strings.TrimSpace(name))}).First(&domain).Error
-	if err != nil {
-		return nil, err
-	}
-	return &domain, nil
-}
-
-func GetDomainsAvailable() ([]*models.Domain, error) {
-	var domains []*models.Domain
-	err := db.Find(&domains).Error
-	if err != nil {
-		return nil, err
-	}
-	return domains, nil
-}
-
-func InsertHost(userID string, sub string, root string) error {
-	// Ensure root domain exists
-	domain, err := GetDomain(root)
-	if err != nil {
-		return errors.New("root domain does not exist")
-	}
-
-	// Create host
-	host := models.Host{
-		UserID: userID,
-		Root:   domain.Name,
-		Sub:    strings.TrimSpace(strings.ToLower(sub)),
-	}
-	err = db.Create(&host).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func DeleteHost(userID string, hostname string) error {
-	return db.Where(&models.Host{
-		UserID: userID,
-		Full:   strings.TrimSpace(strings.ToLower(hostname)),
-	}).Delete(&models.Host{}).Error
+func DB() *gorm.DB {
+	return db
 }
 
 func GetHost(userID string, sub string, root string) (*models.Host, error) {

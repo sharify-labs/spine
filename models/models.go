@@ -24,14 +24,6 @@ type Token struct {
 	UserID string `gorm:"index"` // fk -> User.ID
 }
 
-// Domain represents a domain name that can be used by a User to build a Host.
-// Example: stole-my-blow.wtf
-type Domain struct {
-	gorm.Model
-	ID   uint   `gorm:"primaryKey;autoIncrement"`
-	Name string `gorm:"unique;not null"`
-}
-
 // Host represents a FQDN that a User can upload to.
 // Example:
 //
@@ -42,12 +34,13 @@ type Domain struct {
 //	"user_id": "c99e9b2c-f04b-421e-b4a5-8120d2513b93"
 type Host struct {
 	gorm.Model
-	ID     uint `gorm:"primaryKey;autoincrement"`
-	Sub    string
-	Root   string `gorm:"index"`
-	Full   string // (Host.Sub + Host.Root) or (Host.Sub + Domain.Name)
-	UserID string `gorm:"index"` // fk -> User.ID  (I don't know why but "index" tags required for fk to work)
-	User   User   // required for M-1 relationship (I think)
+	ID       uint `gorm:"primaryKey;autoincrement"`
+	Sub      string
+	Root     string `gorm:"index"`
+	Full     string // (Host.Sub + Host.Root) or (Host.Sub + Domain.Name)
+	RecordID string // Cloudflare DNSRecord.ID
+	UserID   string `gorm:"index"` // fk -> User.ID  (I don't know why but "index" tags required for fk to work)
+	User     User   // required for M-1 relationship (I think)
 }
 
 func (ud *Host) BeforeCreate(_ *gorm.DB) (err error) {

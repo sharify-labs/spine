@@ -7,11 +7,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/discord"
+	"github.com/posty/spine/clients"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/middleware"
 	"github.com/posty/spine/router"
-	"github.com/posty/spine/services"
 	"log"
 	"net/http"
 )
@@ -60,11 +60,11 @@ func Start() {
 		),
 	)
 
+	// Setup clients
+	clients.Setup()
+
 	// Setup databases
 	database.Setup()
-
-	// Setup services
-	services.Setup()
 
 	// Setup middleware
 	middleware.Setup(e)

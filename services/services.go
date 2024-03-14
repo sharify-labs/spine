@@ -1,70 +1,101 @@
 package services
 
 import (
-	"context"
-	"fmt"
-	"github.com/cloudflare/cloudflare-go"
-	"github.com/posty/spine/config"
+	"github.com/posty/spine/clients"
+	"github.com/posty/spine/database"
+	"github.com/posty/spine/models"
+	"strings"
 )
 
-// TODO: Keep an eye out for cloudflare-go "Experimental Improvements"
-// https://github.com/cloudflare/cloudflare-go/blob/master/docs/experimental.md
-var (
-	//cf *cloudflare.Client
-	cf                 *cloudflare.API
-	proxyAlwaysEnabled = true
-)
-
-func Setup() {
-	connectCloudflare()
+// HostDTO helps parse a hostname string into a usable "object".
+type HostDTO struct {
+	Full   string
+	Sub    string
+	Root   string
+	UserID string
 }
 
-func connectCloudflare() {
-	var err error
-
-	//cf, err = cloudflare.NewExperimental(&cloudflare.ClientParams{Token: config.GetStr("CLOUDFLARE_API_TOKEN")})
-	cf, err = cloudflare.NewWithAPIToken(config.GetStr("CLOUDFLARE_API_TOKEN"))
-	if err != nil {
-		panic(err)
+func NewHostDTO(hostname string, userID string) *HostDTO {
+	full := strings.ToLower(strings.TrimSpace(hostname))
+	parts := strings.Split(full, ".")
+	var sub, root string
+	switch {
+	case len(parts) == 2:
+		sub = ""
+		root = full
+	case len(parts) > 2:
+		sub = strings.Join(parts[:len(parts)-2], ".")  // all except last 2 elements
+		root = strings.Join(parts[len(parts)-2:], ".") // last 2 elements
+	default:
+		return nil // not long enough
+	}
+	return &HostDTO{
+		Full:   full,
+		Sub:    sub,
+		Root:   root,
+		UserID: userID,
 	}
 }
 
-func getZoneID(target string) (string, error) {
-	// ListZones *might* return more than one zone for the same root domain.
-	// I am unsure. Leaving this note here so that I remember to implement logic for handling that when the time comes.
-	zones, err := cf.ListZones(context.Background(), target)
-	if err != nil {
-		return "", err
-	}
-	if len(zones) != 1 {
-		return "", fmt.Errorf("zoneFromDomain(%s) returned more than 1 zone", target)
-	}
-	return zones[0].ID, nil
+func (h *HostDTO) sendToCF() (string, error) {
+	return clients.Cloudflare.CreateCNAME(h.UserID, h.Sub, h.Root)
 }
 
-func CreateCNAME(userID string, name string, target string) error {
-	var (
-		zoneID string
-		err    error
-	)
-	zoneID, err = getZoneID(target)
+func (h *HostDTO) sendToDB(recordID string) error {
+	return database.DB().Create(&models.Host{
+		RecordID: recordID,
+		UserID:   h.UserID,
+		Root:     h.Root,
+		Sub:      h.Sub,
+	}).Error
+}
+
+func (h *HostDTO) removeFromCF() error {
+	var host models.Host
+	err := database.DB().Where(&models.Host{
+		Full:   h.Full,
+		UserID: h.UserID,
+	}).First(&host).Error
 	if err != nil {
 		return err
 	}
 
-	_, err = cf.CreateDNSRecord(
-		context.Background(),
-		cloudflare.ZoneIdentifier(zoneID),
-		cloudflare.CreateDNSRecordParams{
-			Type:    "CNAME",
-			Name:    name,
-			Content: target,
-			Comment: "created_by:" + userID,
-			Proxied: &proxyAlwaysEnabled,
-		},
-	)
-
-	return err
+	return clients.Cloudflare.RemoveCNAME(h.Root, host.RecordID)
+}
+func (h *HostDTO) removeFromDB() error {
+	return database.DB().Where(&models.Host{
+		UserID: h.UserID,
+		Full:   h.Full,
+	}).Delete(&models.Host{}).Error
 }
 
-func DeleteCNAME(userID, zoneID, name, target string) {}
+// Register writes the host to the database and creates a Cloudflare CNAME entry.
+func (h *HostDTO) Register() error {
+	recordID, err := h.sendToCF()
+	if err != nil {
+		return err
+	}
+
+	if err = h.sendToDB(recordID); err != nil {
+		// TODO: Add logic to undo Cloudflare change or store RecordID somewhere if database fails
+		return err
+	}
+
+	return nil
+}
+
+func (h *HostDTO) Delete() error {
+	if err := h.removeFromCF(); err != nil {
+		return err
+	}
+
+	if err := h.removeFromDB(); err != nil {
+		// TODO: Add logic to undo Cloudflare removal if DB removal fails.
+		// This is important because Zephyr uploads strictly rely on the database for validating target hostname.
+		// If CF record is removed but DB record persists,
+		// users will still be able to upload to 'deleted' hostnames but images will not be viewable.
+		return err
+	}
+
+	return nil
+}
