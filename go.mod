@@ -17,6 +17,7 @@ require (
 
 require (
 	github.com/fatih/color v1.16.0 // indirect
+	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"github.com/posty/spine/clients"
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/models"
@@ -41,47 +42,74 @@ func NewHostDTO(hostname string, userID string) *HostDTO {
 	}
 }
 
-func (h *HostDTO) exists() (bool, error) {
-	err := database.DB().Where(&models.Host{
-		Sub:  h.Sub,
-		Root: h.Root,
-	}).First(&models.Host{}).Error
-
+func (h *HostDTO) dnsRecord() *models.DnsRecord {
+	var record models.DnsRecord
+	err := database.DB().Where(&models.DnsRecord{Hostname: h.Full}).First(&record).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, err
+		return nil
 	}
-	return true, nil
+	return &record
 }
 
-func (h *HostDTO) sendToCF() (string, error) {
-	return clients.Cloudflare.CreateCNAME(h.UserID, h.Sub, h.Root)
-}
-
-func (h *HostDTO) sendToDB(recordID string) error {
-	return database.DB().Create(&models.Host{
-		RecordID: recordID,
-		UserID:   h.UserID,
-		Root:     h.Root,
-		Sub:      h.Sub,
-	}).Error
-}
-
-func (h *HostDTO) removeFromCF() error {
-	// Get RecordID from database
-	var host models.Host
-	err := database.DB().Where(&models.Host{
-		Sub:    h.Sub,
-		Root:   h.Root,
-		UserID: h.UserID,
-	}).First(&host).Error
+func (h *HostDTO) sendToCF() error {
+	// Create Cloudflare DNS Record
+	record, err := clients.Cloudflare.CreateCNAME(h.UserID, h.Sub, h.Root)
 	if err != nil {
 		return err
 	}
 
-	return clients.Cloudflare.RemoveCNAME(h.Root, host.RecordID)
+	// Store DNS Record in Database
+	err = database.DB().Create(&models.DnsRecord{
+		ID:       record.ID,
+		ZoneID:   record.ZoneID,
+		Hostname: h.Full,
+	}).Error
+
+	if err != nil {
+		// Database insert failed, roll back Cloudflare change
+		err = clients.Cloudflare.RemoveCNAME(record.ZoneID, record.ID)
+		if err != nil {
+			// Created CNAME, Database failed, and now can't remove CNAME -> this edge case will create mess.
+			// TODO: Consider putting details of this event somewhere safe so we can manually fix it
+			return fmt.Errorf("cf record created, database failed, unable to remove cf record: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (h *HostDTO) sendToDB() error {
+	record := h.dnsRecord()
+	if record != nil {
+		return database.DB().Create(&models.Host{
+			DnsRecordID: record.ID,
+			UserID:      h.UserID,
+			Root:        h.Root,
+			Sub:         h.Sub,
+		}).Error
+	}
+	return fmt.Errorf("missing cloudflare recordID for %s", h.Full)
+}
+
+func (h *HostDTO) removeFromCF() error {
+	// Get dns record from database
+	if record := h.dnsRecord(); record != nil {
+		if err := clients.Cloudflare.RemoveCNAME(record.ZoneID, record.ID); err != nil {
+			return err
+		}
+		// Successfully removed CNAME DNS Record from Cloudflare
+		// -> Remove DnsRecord entry from Database too
+		if err := database.DB().Where(
+			&models.DnsRecord{Hostname: h.Full},
+		).Delete(&models.DnsRecord{}).Error; err != nil {
+			// Cloudflare removal success but can't remove DnsRecord from database
+			// TODO: Although rare, it's possible so need to add cleanup/rollback here too.
+			return err
+		}
+		// Successfully removed DNS Record from Cloudflare and Database
+		return nil
+	}
+	return fmt.Errorf("failed to delete %s from cloudflare: database is missing dns record", h.Full)
 }
 func (h *HostDTO) removeFromDB() error {
 	return database.DB().Where(&models.Host{
@@ -93,21 +121,20 @@ func (h *HostDTO) removeFromDB() error {
 
 // Register writes the host to the database and creates a Cloudflare CNAME entry.
 func (h *HostDTO) Register() error {
-	var (
-		recordID string
-		err      error
-	)
-
+	dnsRecord := h.dnsRecord()
+	// If host has subdomain -> might need to create DNS entry
 	if h.Sub != "" {
-		// Note: Only hosts with subdomains need to be sent to CF.
-		recordID, err = h.sendToCF()
-		if err != nil {
-			return err
+		// TODO: Add check for limit of 1000 DNS records per domain.
+		if dnsRecord == nil {
+			// CNAME Record missing -> send to CF (this will also create DnsRecord db entry)
+			if err := h.sendToCF(); err != nil {
+				return err
+			}
 		}
 	}
 
-	if err = h.sendToDB(recordID); err != nil {
-		// TODO: Add logic to undo Cloudflare change or store RecordID somewhere if database fails
+	if err := h.sendToDB(); err != nil {
+		// TODO: Consider adding logic to undo Cloudflare change if database fails
 		return err
 	}
 
@@ -115,19 +142,40 @@ func (h *HostDTO) Register() error {
 }
 
 func (h *HostDTO) Delete() error {
-	// Note: Only hosts with subdomains need to be deleted from CF. Root-only hostnames don't have CNAME records.
-	if h.Sub != "" {
-		if err := h.removeFromCF(); err != nil {
+	// Root-only hostnames don't have CNAME records -> Skip Cloudflare.
+	// Subdomain hostnames should only be removed from Cloudflare if only 1 entry exists in Hosts DB table
+	var (
+		count           int64
+		unique          = false
+		missingDBRecord = false
+	)
+	err := database.DB().Where(&models.Host{Sub: h.Sub, Root: h.Root}).Count(&count).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		missingDBRecord = true
+	}
+	if count == 1 {
+		unique = true
+	}
+
+	// If hostname has subdomain & only 1 record exists in Hosts table
+	// (no other users need it) -> delete dns record from Cloudflare
+	if h.Sub != "" && unique {
+		if err = h.removeFromCF(); err != nil {
 			return err
 		}
 	}
 
-	if err := h.removeFromDB(); err != nil {
-		// TODO: Add logic to undo Cloudflare removal if DB removal fails.
-		// This is important because Zephyr uploads strictly rely on the database for validating target hostname.
-		// If CF record is removed but DB record persists,
-		// users will still be able to upload to 'deleted' hostnames but images will not be viewable.
-		return err
+	if !missingDBRecord {
+		if err = h.removeFromDB(); err != nil {
+			// TODO: Add logic to undo Cloudflare removal if DB removal fails.
+			// This is important because Zephyr uploads strictly rely on the database for validating target hostname.
+			// If CF record is removed but DB record persists,
+			// users will still be able to upload to 'deleted' hostnames but images will not be viewable.
+			return err
+		}
 	}
 
 	return nil

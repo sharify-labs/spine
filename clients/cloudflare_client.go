@@ -31,11 +31,11 @@ func (cf *cfClient) Connect() {
 	}
 }
 
-func (cf *cfClient) CreateCNAME(userID string, sub string, root string) (string, error) {
+func (cf *cfClient) CreateCNAME(userID string, sub string, root string) (*cloudflare.DNSRecord, error) {
 	// Verify if root domain is in list of available domains
 	domains, err := cf.AvailableDomains()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	rootIsAvailable := false
@@ -46,12 +46,12 @@ func (cf *cfClient) CreateCNAME(userID string, sub string, root string) (string,
 		}
 	}
 	if !rootIsAvailable {
-		return "", fmt.Errorf("root %s is not on CF or is missing comment (%s)", root, AvailableDomainComment)
+		return nil, fmt.Errorf("root %s is not on CF or is missing comment (%s)", root, AvailableDomainComment)
 	}
 
 	zoneID, err := cf.api.ZoneIDByName(root)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	record, err := cf.api.CreateDNSRecord(
@@ -66,18 +66,13 @@ func (cf *cfClient) CreateCNAME(userID string, sub string, root string) (string,
 		},
 	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return record.ID, err
+	return &record, err
 }
 
-func (cf *cfClient) RemoveCNAME(root string, recordID string) error {
-	zoneID, err := cf.api.ZoneIDByName(root)
-	if err != nil {
-		return err
-	}
-
+func (cf *cfClient) RemoveCNAME(zoneID string, recordID string) error {
 	return cf.api.DeleteDNSRecord(
 		context.TODO(),
 		cloudflare.ZoneIdentifier(zoneID),

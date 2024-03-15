@@ -47,6 +47,7 @@ func connectSQL() {
 		&models.Token{},
 		&models.Upload{},
 		&models.Host{},
+		&models.DnsRecord{},
 	)
 	if err != nil {
 		panic(err)

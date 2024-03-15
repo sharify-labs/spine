@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -23,6 +24,7 @@ func Setup(e *echo.Echo) {
 			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${remote_ip}) ${latency_human}\n",
 			Output: os.Stdout,
 		}),
+		sentryecho.New(sentryecho.Options{Repanic: true}),
 		session.Middleware(sessStore),
 	)
 }

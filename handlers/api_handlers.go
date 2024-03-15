@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -111,7 +112,7 @@ func CreateHost(c echo.Context) error {
 	// Publish host (add to Cloudflare & Database)
 	err := host.Register()
 	if err != nil {
-		c.Logger().Errorf("failed to register host(%s, %s, %s): %v", userID, host.Sub, host.Root, err)
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to register host(%s, %s, %s): %v", userID, host.Sub, host.Root, err))
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -128,7 +129,7 @@ func DeleteHost(c echo.Context) error {
 
 	if host := services.NewHostDTO(hostname, userID); host != nil {
 		if err := host.Delete(); err != nil {
-			c.Logger().Errorf("error deleting host: %v", err)
+			clients.Sentry.CaptureErr(c, fmt.Errorf("error deleting host: %v", err))
 			return c.NoContent(http.StatusInternalServerError)
 		}
 		return c.NoContent(http.StatusOK)
