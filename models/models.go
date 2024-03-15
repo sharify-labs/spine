@@ -36,21 +36,15 @@ type Host struct {
 	gorm.Model
 	ID       uint `gorm:"primaryKey;autoincrement"`
 	Sub      string
-	Root     string `gorm:"index"`
-	Full     string // (Host.Sub + Host.Root) or (Host.Sub + Domain.Name)
+	Root     string
 	RecordID string // Cloudflare DNSRecord.ID
 	UserID   string `gorm:"index"` // fk -> User.ID  (I don't know why but "index" tags required for fk to work)
 	User     User   // required for M-1 relationship (I think)
 }
 
-func (ud *Host) BeforeCreate(_ *gorm.DB) (err error) {
-	sub := strings.TrimSpace(strings.ToLower(ud.Sub))
-	root := strings.TrimSpace(strings.ToLower(ud.Root))
-	if sub == "" {
-		ud.Full = root
-	} else {
-		ud.Full = sub + "." + root
-	}
+func (h *Host) BeforeCreate(_ *gorm.DB) (err error) {
+	h.Sub = strings.ToLower(strings.TrimSpace(h.Sub))
+	h.Root = strings.ToLower(strings.TrimSpace(h.Root))
 	return
 }
 
@@ -68,6 +62,7 @@ type User struct {
 
 func (u *User) BeforeCreate(_ *gorm.DB) (err error) {
 	u.ID = uuid.NewString()
+	u.Email = strings.ToLower(strings.TrimSpace(u.Email))
 	return
 }
 

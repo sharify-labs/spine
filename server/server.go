@@ -12,6 +12,8 @@ import (
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/middleware"
 	"github.com/posty/spine/router"
+	"html/template"
+	"io"
 	"log"
 	"net/http"
 )
@@ -19,9 +21,13 @@ import (
 //go:embed assets/*
 var assets embed.FS
 
-//type Template struct {
-//	templates *template.Template
-//}
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
 
 func Start() {
 	// Load .env
@@ -45,10 +51,10 @@ func Start() {
 	// Create app
 	e := echo.New()
 
-	//// Setup HTML Template rendering
-	//e.Renderer = &Template{
-	//	templates: template.Must(template.ParseGlob("views/*.html")),
-	//}
+	// Setup HTML Template rendering
+	e.Renderer = &Template{
+		templates: template.Must(template.ParseGlob("frontend/templates/*.html")),
+	}
 
 	// Setup Goth Auth Providers
 	goth.UseProviders(
@@ -80,8 +86,3 @@ func Start() {
 		panic(err)
 	}
 }
-
-//
-//func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-//	return t.templates.ExecuteTemplate(w, name, data)
-//}

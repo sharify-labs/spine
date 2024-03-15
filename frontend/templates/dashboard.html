@@ -1,0 +1,68 @@
+{{ block "index" . }}
+<!--<!DOCTYPE html>-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <!-- HTMX inclusion -->
+    <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+</head>
+<body>
+<div>Welcome to the dashboard, {{.Username}}!</div>
+<form id="create-host-form" hx-post="/api/hosts" hx-target="#create-host-response" hx-swap="outerHTML">
+    <div style="display: flex; align-items: center;">
+        <!-- Input Field -->
+        <input type="text" id="subDomain" name="subDomain" placeholder="Subdomain">
+        <!-- Domain Selector -->
+        <select id="rootDomain" name="rootDomain" required>
+            <option value="">Select Root Domain</option>
+            <!-- Populate this with server-side data -->
+            {{range .Domains}}
+            <option value="{{.}}">{{.}}</option>
+            {{end}}
+        </select>
+        <button type="submit">Submit</button>
+    </div>
+</form>
+<div id="create-host-response"></div>
+<!-- Divider -->
+<hr/>
+<!-- List of active hosts -->
+<div id="hosts-list" style="display: flex; flex-direction: column">
+    {{ range .Hosts }}
+    <div>
+        Host: <span>{{ .Name }}</span>
+    </div>
+    {{ end }}
+</div>
+
+</body>
+</html>
+{{ end }}
+
+<!--    <div id="delete-host-response"></div>-->
+
+
+<!--    <form action="/api/reset-token" method="GET"><button type="submit">Generate Key</button></form>-->
+<!--    <button id="galleryButton">Gallery</button>-->
+<!--    <div id="gallery"></div>-->
+
+<!--    <script>-->
+<!--        document.getElementById("galleryButton").addEventListener("click", function() {-->
+<!--            fetch("/api/gallery", {-->
+<!--                method: "GET",-->
+<!--            }).then(response => response.json())-->
+<!--                .then(data => {-->
+<!--                    const gallery = document.getElementById("gallery");-->
+<!--                    gallery.innerHTML = ''; // Clear previous images-->
+<!--                    data.forEach(base64Image => {-->
+<!--                        const img = document.createElement("img");-->
+<!--                        img.src = 'data:image/jpeg;base64,' + base64Image;-->
+<!--                        gallery.appendChild(img);-->
+<!--                    });-->
+<!--                });-->
+<!--        });-->
+<!--    </script>-->
+
+

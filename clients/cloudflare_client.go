@@ -86,19 +86,29 @@ func (cf *cfClient) RemoveCNAME(root string, recordID string) error {
 }
 
 func (cf *cfClient) AvailableDomains() ([]string, error) {
-	records, _, err := cf.api.ListDNSRecords(
-		context.TODO(),
-		cloudflare.AccountIdentifier(config.GetStr("CLOUDFLARE_ACCOUNT_ID")),
-		cloudflare.ListDNSRecordsParams{Type: "A", Comment: AvailableDomainComment},
-	)
+	// TODO: Listing all available zones, and then
+	//   iterating over them and making a new request for each zone to get all the A records seems inefficient
+	//   and a waste of API requests. Rewrite this to somehow do it in 1 request to CF.
+	zones, err := cf.api.ListZones(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
 	var domains []string
-	for _, r := range records {
-		domains = append(domains, r.Name)
+	var records []cloudflare.DNSRecord
+	for _, z := range zones {
+		records, _, err = cf.api.ListDNSRecords(
+			context.TODO(),
+			cloudflare.ZoneIdentifier(z.ID),
+			cloudflare.ListDNSRecordsParams{Type: "A", Comment: AvailableDomainComment},
+		)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		for _, r := range records {
+			domains = append(domains, r.Name)
+		}
 	}
-
 	return domains, nil
 }

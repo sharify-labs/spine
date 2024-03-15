@@ -10,6 +10,7 @@ import (
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/security"
 	"github.com/posty/spine/services"
+	"github.com/posty/spine/utils"
 	"io"
 	"net/http"
 )
@@ -88,21 +89,17 @@ func ListAvailableDomains(c echo.Context) error {
 // ListHosts returns a JSON array of all hosts registered by a given user.
 func ListHosts(c echo.Context) error {
 	userID := getUserID(c)
-	hosts, err := database.GetAllHosts(userID)
+	hostnames, err := database.GetAllHostnames(userID)
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	var names []string
-	for _, host := range hosts {
-		names = append(names, host.Full)
-	}
-	return c.JSON(http.StatusOK, names)
+	return c.JSON(http.StatusOK, hostnames)
 }
 
 // CreateHost creates new hosts for a user.
 // Root domain must be registered first. This can be checked with ListDomainsHandler.
 func CreateHost(c echo.Context) error {
-	hostname := c.Param("name")
+	hostname := utils.CompileHostname(c.FormValue("subDomain"), c.FormValue("rootDomain"))
 	userID := getUserID(c)
 
 	host := services.NewHostDTO(hostname, userID)
@@ -114,7 +111,7 @@ func CreateHost(c echo.Context) error {
 	// Publish host (add to Cloudflare & Database)
 	err := host.Register()
 	if err != nil {
-		c.Logger().Errorf("failed to create CNAME(%s, %s, %s): %v", userID, host.Sub, host.Root, err)
+		c.Logger().Errorf("failed to register host(%s, %s, %s): %v", userID, host.Sub, host.Root, err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -126,7 +123,7 @@ func CreateHost(c echo.Context) error {
 
 // DeleteHost deletes a registered hostname.
 func DeleteHost(c echo.Context) error {
-	hostname := c.Param("name")
+	hostname := c.FormValue("hostname")
 	userID := getUserID(c)
 
 	if host := services.NewHostDTO(hostname, userID); host != nil {

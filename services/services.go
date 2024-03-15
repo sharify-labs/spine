@@ -1,9 +1,11 @@
 package services
 
 import (
+	"errors"
 	"github.com/posty/spine/clients"
 	"github.com/posty/spine/database"
 	"github.com/posty/spine/models"
+	"gorm.io/gorm"
 	"strings"
 )
 
@@ -16,25 +18,42 @@ type HostDTO struct {
 }
 
 func NewHostDTO(hostname string, userID string) *HostDTO {
-	full := strings.ToLower(strings.TrimSpace(hostname))
-	parts := strings.Split(full, ".")
+	hostname = strings.ToLower(strings.TrimSpace(hostname))
+	parts := strings.Split(hostname, ".")
 	var sub, root string
 	switch {
 	case len(parts) == 2:
 		sub = ""
-		root = full
-	case len(parts) > 2:
-		sub = strings.Join(parts[:len(parts)-2], ".")  // all except last 2 elements
-		root = strings.Join(parts[len(parts)-2:], ".") // last 2 elements
+		root = hostname
+	case len(parts) == 3:
+		sub = parts[0]
+		root = parts[1] + "." + parts[2]
+		//sub = strings.Join(parts[:len(parts)-2], ".")  // all except last 2 elements
+		//root = strings.Join(parts[len(parts)-2:], ".") // last 2 elements
 	default:
-		return nil // not long enough
+		return nil // not long enough or more than 1 level to subdomain
 	}
 	return &HostDTO{
-		Full:   full,
+		Full:   hostname,
 		Sub:    sub,
 		Root:   root,
 		UserID: userID,
 	}
+}
+
+func (h *HostDTO) exists() (bool, error) {
+	err := database.DB().Where(&models.Host{
+		Sub:  h.Sub,
+		Root: h.Root,
+	}).First(&models.Host{}).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (h *HostDTO) sendToCF() (string, error) {
@@ -51,9 +70,11 @@ func (h *HostDTO) sendToDB(recordID string) error {
 }
 
 func (h *HostDTO) removeFromCF() error {
+	// Get RecordID from database
 	var host models.Host
 	err := database.DB().Where(&models.Host{
-		Full:   h.Full,
+		Sub:    h.Sub,
+		Root:   h.Root,
 		UserID: h.UserID,
 	}).First(&host).Error
 	if err != nil {
@@ -64,16 +85,25 @@ func (h *HostDTO) removeFromCF() error {
 }
 func (h *HostDTO) removeFromDB() error {
 	return database.DB().Where(&models.Host{
+		Sub:    h.Sub,
+		Root:   h.Root,
 		UserID: h.UserID,
-		Full:   h.Full,
 	}).Delete(&models.Host{}).Error
 }
 
 // Register writes the host to the database and creates a Cloudflare CNAME entry.
 func (h *HostDTO) Register() error {
-	recordID, err := h.sendToCF()
-	if err != nil {
-		return err
+	var (
+		recordID string
+		err      error
+	)
+
+	if h.Sub != "" {
+		// Note: Only hosts with subdomains need to be sent to CF.
+		recordID, err = h.sendToCF()
+		if err != nil {
+			return err
+		}
 	}
 
 	if err = h.sendToDB(recordID); err != nil {
@@ -85,8 +115,11 @@ func (h *HostDTO) Register() error {
 }
 
 func (h *HostDTO) Delete() error {
-	if err := h.removeFromCF(); err != nil {
-		return err
+	// Note: Only hosts with subdomains need to be deleted from CF. Root-only hostnames don't have CNAME records.
+	if h.Sub != "" {
+		if err := h.removeFromCF(); err != nil {
+			return err
+		}
 	}
 
 	if err := h.removeFromDB(); err != nil {

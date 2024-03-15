@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/posty/spine/config"
 	"github.com/posty/spine/models"
+	"github.com/posty/spine/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -56,24 +57,25 @@ func DB() *gorm.DB {
 	return db
 }
 
-func GetHost(userID string, sub string, root string) (*models.Host, error) {
-	var host models.Host
-	err := db.Where(&models.Host{
-		UserID: userID, Sub: sub, Root: root,
-	}).First(&host).Error
-	if err != nil {
-		return nil, err
-	}
-	return &host, nil
-}
-
-func GetAllHosts(userID string) ([]*models.Host, error) {
+func getAllHosts(userID string) ([]*models.Host, error) {
 	var hosts []*models.Host
 	err := db.Where(&models.Host{UserID: userID}).Find(&hosts).Error
 	if err != nil {
 		return nil, err
 	}
 	return hosts, nil
+}
+
+func GetAllHostnames(userID string) ([]string, error) {
+	hosts, err := getAllHosts(userID)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, host := range hosts {
+		names = append(names, utils.CompileHostname(host.Sub, host.Root))
+	}
+	return names, nil
 }
 
 func GetUserUploads(userID string) ([]*models.Upload, error) {

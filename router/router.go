@@ -22,9 +22,12 @@ import (
 // GET     /api/gallery -> handlers.DisplayGallery
 //
 // GET     /api/hosts -> handlers.ListHosts
-// POST    /api/hosts/:name -> handlers.CreateHost
-// DELETE  /api/hosts/:name -> handlers.DeleteHost
+// POST    /api/hosts -> handlers.CreateHost
+// DELETE  /api/hosts -> handlers.DeleteHost
 func Setup(e *echo.Echo) {
+	// Static files
+	//e.Static("/", "frontend/static")
+
 	// Root routes
 	e.GET("", handlers.Root)
 	e.GET("/login", handlers.Login)
@@ -54,8 +57,8 @@ func Setup(e *echo.Echo) {
 		hosts := api.Group("/hosts")
 		{
 			hosts.GET("", handlers.ListHosts)
-			hosts.POST("/:name", handlers.CreateHost)
-			hosts.DELETE("/:name", handlers.DeleteHost)
+			hosts.POST("", handlers.CreateHost)
+			hosts.DELETE("", handlers.DeleteHost)
 		}
 	}
 
