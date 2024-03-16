@@ -5,11 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
     <!-- HTMX inclusion -->
     <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
 </head>
 <body>
-<div>Welcome to the dashboard, {{.Username}}!</div>
+<h1>Welcome to the dashboard, {{.Username}}!</h1>
+
+<form id="reset-token-form" hx-get="/api/reset-token" hx-target="#reset-token-response" hx-swap="outerHTML">
+    <button class="button" type="submit">Generate Key</button>
+</form>
+<div id="reset-token-response"></div>
+
+<!--<button id="galleryButton">Gallery</button>-->
+<!--<div id="gallery"></div>-->
+
 <form id="create-host-form" hx-post="/api/hosts" hx-target="#create-host-response" hx-swap="outerHTML">
     <div style="display: flex; align-items: center;">
         <!-- Input Field -->
@@ -22,25 +32,48 @@
             <option value="{{.}}">{{.}}</option>
             {{end}}
         </select>
-        <button type="submit">Submit</button>
+        <button class="button" type="submit">Submit</button>
     </div>
 </form>
 <div id="create-host-response"></div>
+<!-- UserID Box -->
+<pre style="background-color: #131516; color: #cccccc; border: 1px solid #ccc; padding: 0;">
+        <code id="user-id">{{ .UserID }}</code>
+        <button class="button" onclick="copyContent('user-id')">Copy UserID</button>
+</pre>
 <!-- Divider -->
 <hr/>
+
 <!-- List of active hosts -->
 <div id="hosts-list" style="display: flex; flex-direction: column">
     {{ range .Hosts }}
     <div>
-        Host: <span>{{ .Name }}</span>
+        <span>{{ .Name }}</span>
+        <button class="button delete"
+                hx-delete="/api/hosts/{{ .Name }}"
+                hx-confirm="Are you sure you want do delete this host?"
+                hx-target="#hosts-list"
+                hx-swap="outerHTML">Delete
+        </button>
     </div>
     {{ end }}
 </div>
 
+<script>
+    function copyContent(elementID) {
+        const content = document.getElementById(elementID).innerText;
+        navigator.clipboard.writeText(content).then(function () {
+            console.log('Copying to clipboard was successful!');
+        }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    }
+</script>
+
 </body>
 </html>
-{{ end }}
 
+{{ end }}
 <!--    <div id="delete-host-response"></div>-->
 
 

@@ -33,10 +33,12 @@ func ResetToken(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		config.UserHeader:  userID,
-		config.TokenHeader: token.Value,
-	})
+	return c.HTML(
+		http.StatusOK,
+		`<pre style="margin: 0; font-size: 16px; background-color: #131516; color: #ccc; border: 1px solid #ccc; padding: 0;">
+		<code id="token">`+token.Value+`</code></pre>
+		<button onclick="copyContent('token')">Copy Token</button>`,
+	)
 }
 
 func DisplayGallery(c echo.Context) error {
@@ -124,11 +126,12 @@ func CreateHost(c echo.Context) error {
 
 // DeleteHost deletes a registered hostname.
 func DeleteHost(c echo.Context) error {
-	hostname := c.FormValue("hostname")
+	hostname := c.Param("name")
 	userID := getUserID(c)
 
 	if host := services.NewHostDTO(hostname, userID); host != nil {
 		if err := host.Delete(); err != nil {
+			c.Logger().Error(err)
 			clients.Sentry.CaptureErr(c, fmt.Errorf("error deleting host: %v", err))
 			return c.NoContent(http.StatusInternalServerError)
 		}

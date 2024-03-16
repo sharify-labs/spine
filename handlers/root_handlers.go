@@ -18,6 +18,7 @@ func Login(c echo.Context) error {
 
 type DashboardData struct {
 	Username string
+	UserID   string
 	Domains  []string
 	Hosts    []HostData
 }
@@ -55,6 +56,7 @@ func DisplayDashboard(c echo.Context) error {
 		http.StatusOK, "dashboard.html",
 		DashboardData{
 			Username: username,
+			UserID:   userID,
 			Domains:  domains,
 			Hosts:    hosts,
 		},

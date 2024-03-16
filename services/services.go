@@ -149,7 +149,7 @@ func (h *HostDTO) Delete() error {
 		unique          = false
 		missingDBRecord = false
 	)
-	err := database.DB().Where(&models.Host{Sub: h.Sub, Root: h.Root}).Count(&count).Error
+	err := database.DB().Model(&models.Host{}).Where(&models.Host{Sub: h.Sub, Root: h.Root}).Count(&count).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err

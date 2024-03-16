@@ -18,9 +18,6 @@ import (
 	"net/http"
 )
 
-//go:embed assets/*
-var assets embed.FS
-
 type Template struct {
 	templates *template.Template
 }
@@ -29,7 +26,7 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
-func Start() {
+func Start(assets embed.FS) {
 	// Load .env
 	if err := godotenv.Load(); err != nil {
 		panic(err)
@@ -53,7 +50,7 @@ func Start() {
 
 	// Setup HTML Template rendering
 	e.Renderer = &Template{
-		templates: template.Must(template.ParseGlob("frontend/templates/*.html")),
+		templates: template.Must(template.ParseFS(assets, "frontend/templates/*.html")),
 	}
 
 	// Setup Goth Auth Providers
