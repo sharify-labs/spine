@@ -41,6 +41,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           make_latest: true
-          name: "${VERSION}-${RELEASE}"
+          name: ${{ env.VERSION }}-${{ env.RELEASE }}
           files: |
-            bin/spine-${VERSION}-${RELEASE}.bin
+            "bin/spine-${VERSION}-${RELEASE}.bin"
