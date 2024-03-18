@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-// Upload represents an image uploaded to our app.
+// Upload represents an upload to our app.
 type Upload struct {
 	gorm.Model
 	ID         uint   `gorm:"primaryKey;autoIncrement"`
-	StorageKey string `gorm:"unique"`
+	StorageKey string `gorm:"not null"`
 	UserID     string `gorm:"index"` // fk -> User.ID
 	User       User   // required for M-1 relationship (I think)
 }
