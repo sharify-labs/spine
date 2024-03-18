@@ -70,7 +70,7 @@ func Start(assets embed.FS) {
 	database.Setup()
 
 	// Setup middleware
-	middleware.Setup(e)
+	middleware.Setup(e, assets)
 
 	// Setup router
 	router.Setup(e)

@@ -25,9 +25,6 @@ import (
 // POST    /api/hosts -> handlers.CreateHost
 // DELETE  /api/hosts -> handlers.DeleteHost
 func Setup(e *echo.Echo) {
-	// Static files
-	e.Static("/", "frontend/static")
-
 	// Root routes
 	e.GET("", handlers.Root)
 	e.GET("/login", handlers.Login)

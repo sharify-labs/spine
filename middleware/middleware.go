@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"embed"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -11,7 +12,7 @@ import (
 	"os"
 )
 
-func Setup(e *echo.Echo) {
+func Setup(e *echo.Echo, assets embed.FS) {
 	// Init Gothic for oAuth2
 	sessStore := sessions.NewCookieStore([]byte("secret")) // TODO: Secure this
 	gothic.Store = sessStore
@@ -23,6 +24,11 @@ func Setup(e *echo.Echo) {
 		mw.LoggerWithConfig(mw.LoggerConfig{
 			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${remote_ip}) ${latency_human}\n",
 			Output: os.Stdout,
+		}),
+		mw.StaticWithConfig(mw.StaticConfig{
+			IgnoreBase: true,
+			Root:       "frontend",
+			Filesystem: http.FS(assets),
 		}),
 		sentryecho.New(sentryecho.Options{Repanic: true}),
 		session.Middleware(sessStore),
