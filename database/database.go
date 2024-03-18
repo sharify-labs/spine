@@ -3,9 +3,9 @@ package database
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/posty/spine/config"
-	"github.com/posty/spine/models"
-	"github.com/posty/spine/utils"
+	"github.com/sharify-labs/spine/config"
+	"github.com/sharify-labs/spine/models"
+	"github.com/sharify-labs/spine/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"

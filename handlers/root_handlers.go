@@ -3,8 +3,8 @@ package handlers
 import (
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"github.com/posty/spine/clients"
-	"github.com/posty/spine/database"
+	"github.com/sharify-labs/spine/clients"
+	"github.com/sharify-labs/spine/database"
 	"net/http"
 )
 

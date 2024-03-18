@@ -5,8 +5,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
-	"github.com/posty/spine/database"
-	"github.com/posty/spine/models"
+	"github.com/sharify-labs/spine/database"
+	"github.com/sharify-labs/spine/models"
 	"net/http"
 )
 

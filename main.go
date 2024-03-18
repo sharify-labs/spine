@@ -2,7 +2,7 @@ package main
 
 import (
 	"embed"
-	"github.com/posty/spine/server"
+	"github.com/sharify-labs/spine/server"
 )
 
 //go:embed frontend/*

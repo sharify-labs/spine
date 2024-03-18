@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 	"fmt"
-	"github.com/posty/spine/clients"
-	"github.com/posty/spine/database"
-	"github.com/posty/spine/models"
+	"github.com/sharify-labs/spine/clients"
+	"github.com/sharify-labs/spine/database"
+	"github.com/sharify-labs/spine/models"
 	"gorm.io/gorm"
 	"strings"
 )

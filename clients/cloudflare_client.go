@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudflare/cloudflare-go"
-	"github.com/posty/spine/config"
+	"github.com/sharify-labs/spine/config"
 )
 
 // TODO: Keep an eye out for cloudflare-go "Experimental Improvements"

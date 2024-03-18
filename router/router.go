@@ -2,8 +2,8 @@ package router
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/posty/spine/handlers"
-	mw "github.com/posty/spine/middleware"
+	"github.com/sharify-labs/spine/handlers"
+	mw "github.com/sharify-labs/spine/middleware"
 )
 
 // Setup initializes all routes:
