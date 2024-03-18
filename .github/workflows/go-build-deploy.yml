@@ -13,9 +13,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  RELEASE: ${{ github.run_number }}
-
 jobs:
   build_deploy:
     runs-on: ubuntu-latest
@@ -35,12 +32,12 @@ jobs:
       - name: Compile binary
         run: >-
           env CGO_ENABLED=0 
-          go build -trimpath -ldflags="-s -w" -o "bin/spine-${VERSION}-${RELEASE}".bin .
+          go build -trimpath -ldflags="-s -w" -o "bin/spine-${VERSION}.bin" .
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           make_latest: true
-          name: ${{ env.VERSION }}-${{ env.RELEASE }}
+          name: v${{ env.VERSION }}
           files: |
-            "bin/spine-${VERSION}-${RELEASE}.bin"
+            "bin/spine-${VERSION}.bin"
