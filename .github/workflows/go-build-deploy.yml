@@ -25,19 +25,15 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
-      - name: Read version
-        run: |
-          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
-
       - name: Compile binary
         run: >-
           env CGO_ENABLED=0 
-          go build -trimpath -ldflags="-s -w" -o "bin/spine-${VERSION}.bin" .
+          go build -trimpath -ldflags="-s -w" -o "bin/spine-${{ github.ref_name }}.bin" .
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          name: v${{ env.VERSION }}
+          name: v${{ github.ref_name }}
           files: bin/spine-*.bin
           make_latest: true
           fail_on_unmatched_files: true
