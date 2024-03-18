@@ -28,7 +28,8 @@ jobs:
       - name: Compile binary
         run: >-
           env CGO_ENABLED=0 
-          go build -trimpath -ldflags="-s -w" -o "bin/spine-${{ github.ref_name }}.bin" .
+          go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" 
+          -o "bin/spine-${{ github.ref_name }}.bin" .
 
       - name: Create release
         uses: softprops/action-gh-release@v2

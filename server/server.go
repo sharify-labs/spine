@@ -26,7 +26,7 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
-func Start(assets embed.FS) {
+func Start(assets embed.FS, version string) {
 	// Load .env
 	if err := godotenv.Load(); err != nil {
 		panic(err)
@@ -76,7 +76,7 @@ func Start(assets embed.FS) {
 	router.Setup(e)
 
 	// Send console message to alert Pterodactyl
-	log.Println("Started Spine")
+	log.Println("Started Spine v" + version)
 
 	// Start app
 	if err := e.Start(":" + config.GetStr("PORT")); !errors.Is(err, http.ErrServerClosed) {

@@ -7,7 +7,8 @@ import (
 
 //go:embed frontend/*
 var assets embed.FS
+var version string
 
 func main() {
-	server.Start(assets)
+	server.Start(assets, version)
 }
