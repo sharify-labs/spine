@@ -37,7 +37,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          make_latest: true
           name: v${{ env.VERSION }}
-          files: |
-            "bin/spine-${VERSION}.bin"
+          files: bin/spine-*.bin
+          make_latest: true
+          fail_on_unmatched_files: true
