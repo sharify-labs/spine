@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"github.com/joho/godotenv"
@@ -16,6 +17,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 type Template struct {
@@ -75,11 +79,23 @@ func Start(assets embed.FS, version string) {
 	// Setup router
 	router.Setup(e)
 
-	// Send console message to alert Pterodactyl
-	log.Println("Started Spine v" + version)
+	// Setup graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
 	// Start app
-	if err := e.Start(":" + config.GetStr("PORT")); !errors.Is(err, http.ErrServerClosed) {
-		panic(err)
+	go func() {
+		log.Println("Started Spine v" + version)
+		if err := e.Start(":" + config.GetStr("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			e.Logger.Fatal("shutting down server")
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully close the server with a timeout of 30 seconds.
+	<-ctx.Done()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
 	}
 }
