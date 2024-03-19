@@ -5,7 +5,7 @@ import (
 	"github.com/sharify-labs/spine/server"
 )
 
-//go:embed frontend/*
+//go:embed assets/*
 var assets embed.FS
 var version string
 

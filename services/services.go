@@ -30,8 +30,6 @@ func NewHostDTO(hostname string, userID string) *HostDTO {
 	case len(parts) == 3:
 		sub = parts[0]
 		root = parts[1] + "." + parts[2]
-		//sub = strings.Join(parts[:len(parts)-2], ".")  // all except last 2 elements
-		//root = strings.Join(parts[len(parts)-2:], ".") // last 2 elements
 	default:
 		return nil // not long enough or more than 1 level to subdomain
 	}
@@ -159,42 +157,42 @@ func (h *HostDTO) Register() error {
 func (h *HostDTO) Delete() error {
 	// Root-only hostnames don't have CNAME records -> Skip Cloudflare.
 	// Subdomain hostnames should only be removed from Cloudflare if only 1 entry exists in Hosts DB table
-	var (
-		count           int64
-		unique          = false
-		missingDBRecord = false
-	)
+	var count int64
+
 	// Lock hosts table from getting updated while counting records to prevent race condition (I think?)
 	err := database.DB().Clauses(clause.Locking{
 		Strength: "SHARE",
 		Table:    clause.Table{Name: "hosts"},
-	}).Model(&models.Host{}).Where(&models.Host{Sub: h.Sub, Root: h.Root}).Count(&count).Error
+	}).Model(&models.Host{}).Where(&models.Host{
+		Sub:  h.Sub,
+		Root: h.Root,
+	}).Count(&count).Error
 	if err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil // no records exist with given hostname
 		}
-		missingDBRecord = true
+		return err
 	}
-	if count == 1 {
-		unique = true
+
+	// TODO: Not sure if 0 results will return ErrRecordNotFound or just return count of 0. Adding this for safety.
+	if count == 0 {
+		return nil
 	}
 
 	// If hostname has subdomain & only 1 record exists in Hosts table
 	// (no other users need it) -> delete dns record from Cloudflare
-	if h.Sub != "" && unique {
+	if h.Sub != "" && count == 1 {
 		if err = h.removeFromCF(); err != nil {
 			return err
 		}
 	}
 
-	if !missingDBRecord {
-		if err = h.removeFromDB(); err != nil {
-			// TODO: Add logic to undo Cloudflare removal if DB removal fails.
-			// This is important because Zephyr uploads strictly rely on the database for validating target hostname.
-			// If CF record is removed but DB record persists,
-			// users will still be able to upload to 'deleted' hostnames but images will not be viewable.
-			return err
-		}
+	if err = h.removeFromDB(); err != nil {
+		// TODO: Add logic to undo Cloudflare removal if DB removal fails.
+		// This is important because Zephyr uploads strictly rely on the database for validating target hostname.
+		// If CF record is removed but DB record persists,
+		// users will still be able to upload to 'deleted' hostnames but images will not be viewable.
+		return err
 	}
 
 	return nil

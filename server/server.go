@@ -39,22 +39,15 @@ func Start(assets embed.FS, version string) {
 	// Initialize Sentry
 	//lib.StartSentry(version)
 
-	// Set Log Level for Fiber
-	//fiberlog.SetLevel(fiberlog.Level(config.GetInt("LOG_LEVEL")))
-	//fiber.Config{
-	//	ProxyHeader:             fiber.HeaderXForwardedFor,
-	//	JSONEncoder:             goccy.Marshal,
-	//	JSONDecoder:             goccy.Unmarshal,
-	//	EnableTrustedProxyCheck: true,
-	//	TrustedProxies:          config.GetTrustedProxies(assets),
-	//}
-
 	// Create app
 	e := echo.New()
 
+	// Configure trusted proxies
+	e.IPExtractor = echo.ExtractIPFromXFFHeader(config.GetTrustedProxyRanges(assets)...)
+
 	// Setup HTML Template rendering
 	e.Renderer = &Template{
-		templates: template.Must(template.ParseFS(assets, "frontend/templates/*.html")),
+		templates: template.Must(template.ParseFS(assets, "assets/templates/*.html")),
 	}
 
 	// Setup Goth Auth Providers

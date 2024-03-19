@@ -27,7 +27,7 @@ func DiscordAuthCallback(c echo.Context) error {
 	var authUser goth.User
 	authUser, err = gothic.CompleteUserAuth(c.Response().Writer, c.Request())
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	// Store user's Discord details in session
@@ -39,7 +39,7 @@ func DiscordAuthCallback(c echo.Context) error {
 	var u *models.User
 	u, err = database.GetOrCreateUser(authUser.Email)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	// Store UserID in session
@@ -48,7 +48,7 @@ func DiscordAuthCallback(c echo.Context) error {
 	// Save session
 	err = sess.Save(c.Request(), c.Response())
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.Redirect(http.StatusFound, "/dashboard")

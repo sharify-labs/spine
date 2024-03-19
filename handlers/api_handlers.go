@@ -18,19 +18,22 @@ import (
 
 func getUserID(c echo.Context) string {
 	sess, _ := session.Get("session", c)
+	// TODO: In hindsight, this doesn't seem safe
 	return sess.Values["user_id"].(string)
 }
 
-// ResetToken refreshes an existing user's upload-key.
 func ResetToken(c echo.Context) error {
+	var token *security.ZephyrToken
+	var err error
+
 	userID := getUserID(c)
-	token := security.NewZephyrToken()
-	if token == nil {
-		return c.NoContent(http.StatusInternalServerError)
+
+	if token, err = security.NewZephyrToken(); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	if err := database.UpdateUserToken(userID, token.Hash, token.Salt); err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+	if err = database.UpdateUserToken(userID, token.Hash, token.Salt); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.HTML(
@@ -43,12 +46,9 @@ func ResetToken(c echo.Context) error {
 
 func DisplayGallery(c echo.Context) error {
 	userID := getUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusBadRequest)
-	}
 	uploads, err := database.GetUserUploads(userID)
 	if err != nil {
-		return c.NoContent(http.StatusBadRequest)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 	var storeKeys []string
 	for _, u := range uploads {
@@ -57,22 +57,22 @@ func DisplayGallery(c echo.Context) error {
 
 	rqBody, err := goccy.Marshal(storeKeys)
 	if err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	url := "https://ejl.me/api/uploads/" + userID + "?key=" + config.GetStr("CANVAS_API_KEY")
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(rqBody))
 	if err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	var base64Images []string
 	if err = goccy.Unmarshal(respBody, &base64Images); err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, base64Images)
@@ -83,7 +83,7 @@ func DisplayGallery(c echo.Context) error {
 // TODO: Cache this in Redis (12-24 hours sounds reasonable)
 func ListAvailableDomains(c echo.Context) error {
 	if domains, err := clients.Cloudflare.AvailableDomains(); err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	} else {
 		return c.JSON(http.StatusOK, domains)
 	}
@@ -94,7 +94,7 @@ func ListHosts(c echo.Context) error {
 	userID := getUserID(c)
 	hostnames, err := database.GetAllHostnames(userID)
 	if err != nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, hostnames)
 }
@@ -108,14 +108,14 @@ func CreateHost(c echo.Context) error {
 	host := services.NewHostDTO(hostname, userID)
 	if host == nil {
 		// Hostname does not meet format requirements. Should prob be validated on frontend too.
-		return c.NoContent(http.StatusBadRequest)
+		return echo.NewHTTPError(http.StatusBadRequest, "Hostname format must be sub.root.tld")
 	}
 
 	// Publish host (add to Cloudflare & Database)
 	err := host.Register()
 	if err != nil {
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to register host(%s, %s, %s): %v", userID, host.Sub, host.Root, err))
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -124,7 +124,6 @@ func CreateHost(c echo.Context) error {
 	})
 }
 
-// DeleteHost deletes a registered hostname.
 func DeleteHost(c echo.Context) error {
 	hostname := c.Param("name")
 	userID := getUserID(c)
@@ -133,9 +132,10 @@ func DeleteHost(c echo.Context) error {
 		if err := host.Delete(); err != nil {
 			c.Logger().Error(err)
 			clients.Sentry.CaptureErr(c, fmt.Errorf("error deleting host: %v", err))
-			return c.NoContent(http.StatusInternalServerError)
+			return echo.NewHTTPError(http.StatusInternalServerError, err)
 		}
 		return c.NoContent(http.StatusOK)
 	}
-	return c.NoContent(http.StatusBadRequest)
+
+	return echo.NewHTTPError(http.StatusInternalServerError, "Hostname format must be sub.root.tld")
 }

@@ -2,12 +2,21 @@ package config
 
 import (
 	"embed"
+	"fmt"
 	goccy "github.com/goccy/go-json"
+	"github.com/labstack/echo/v4"
 	"io/fs"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
+)
+
+const (
+	UserHeader  string = "X-Upload-User"
+	TokenHeader string = "X-Upload-Token"
+	HostHeader  string = "X-Upload-Host"
 )
 
 func GetStr(key string) string {
@@ -42,27 +51,38 @@ func GetBool(key string) bool {
 	return valueBool
 }
 
-func GetTrustedProxies(assets embed.FS) []string {
+func GetList(key string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("Missing config value for %s", key)
+	}
+	return strings.Split(value, ",")
+}
+
+func GetTrustedProxyRanges(assets embed.FS) []echo.TrustOption {
 	const path string = "assets/cloudflare_ips.json"
-	var out []string
+	var out []echo.TrustOption
+	var ipRanges []string
 
 	file, err := fs.ReadFile(assets, path)
 	if err != nil {
 		log.Fatalf("Unable to read %s", path)
 	}
 
-	err = goccy.Unmarshal(file, &out)
+	err = goccy.Unmarshal(file, &ipRanges)
 	if err != nil {
 		log.Fatalf("Unable to unmarshal %s", path)
 	}
 
-	// Append any IPs added to .env
-	proxies := strings.Split(os.Getenv("TRUSTED_PROXIES_LIST"), ",")
-	if len(proxies) >= 1 {
-		for _, p := range proxies {
-			out = append(out, p)
+	var ipNet *net.IPNet
+	for _, r := range ipRanges {
+		_, ipNet, err = net.ParseCIDR(r)
+		if err != nil {
+			fmt.Printf("IP range %q could not be parsed: %v\n", r, err)
+		} else {
+			out = append(out, echo.TrustIPRange(ipNet))
 		}
 	}
-	log.Println(out)
+
 	return out
 }

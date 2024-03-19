@@ -9,21 +9,21 @@ import (
 // Setup initializes all routes:
 //
 // Root:
-// GET     / -> handlers.Root
-// GET     /login -> handlers.Login
+// GET     /       -> handlers.Root
+// GET     /login  -> handlers.Login
 //
 // Auth:
-// GET     /auth/discord -> handlers.DiscordAuth
-// GET     /auth/discord/callback -> handlers.DiscordAuthCallback
+// GET     /auth/discord           -> handlers.DiscordAuth
+// GET     /auth/discord/callback  -> handlers.DiscordAuthCallback
 //
 // Protected:
-// GET     /dashboard -> handlers.DisplayDashboard
-// GET     /api/reset-token -> handlers.ResetToken
-// GET     /api/gallery -> handlers.DisplayGallery
+// GET     /dashboard        -> handlers.DisplayDashboard
+// GET     /api/reset-token  -> handlers.ResetToken
+// GET     /api/gallery      -> handlers.DisplayGallery
 //
-// GET     /api/hosts -> handlers.ListHosts
-// POST    /api/hosts -> handlers.CreateHost
-// DELETE  /api/hosts -> handlers.DeleteHost
+// GET     /api/hosts        -> handlers.ListHosts
+// POST    /api/hosts        -> handlers.CreateHost
+// DELETE  /api/hosts/:name  -> handlers.DeleteHost
 func Setup(e *echo.Echo) {
 	// Root routes
 	e.GET("", handlers.Root)
@@ -58,5 +58,4 @@ func Setup(e *echo.Echo) {
 			hosts.DELETE("/:name", handlers.DeleteHost)
 		}
 	}
-
 }

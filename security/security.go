@@ -13,17 +13,17 @@ type ZephyrToken struct {
 }
 
 // NewZephyrToken generates a new upload token. Does NOT store it in database.
-func NewZephyrToken() *ZephyrToken {
+func NewZephyrToken() (*ZephyrToken, error) {
 	value := uuid.NewString()
 	salt, err := generateSalt(16)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &ZephyrToken{
 		Value: value,
 		Salt:  salt,
 		Hash:  hashToken(value, salt),
-	}
+	}, nil
 }
 
 // generateSalt generates n bytes randomly and securely

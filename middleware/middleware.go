@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	mw "github.com/labstack/echo/v4/middleware"
 	"github.com/markbates/goth/gothic"
+	"github.com/sharify-labs/spine/config"
 	"net/http"
 	"os"
 )
@@ -25,9 +26,11 @@ func Setup(e *echo.Echo, assets embed.FS) {
 			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${remote_ip}) ${latency_human}\n",
 			Output: os.Stdout,
 		}),
+		mw.CORSWithConfig(mw.CORSConfig{
+			AllowOrigins: config.GetList("ALLOW_ORIGINS"),
+		}),
 		mw.StaticWithConfig(mw.StaticConfig{
-			IgnoreBase: true,
-			Root:       "frontend",
+			Root:       "assets/static",
 			Filesystem: http.FS(assets),
 		}),
 		sentryecho.New(sentryecho.Options{Repanic: true}),

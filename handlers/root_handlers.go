@@ -37,14 +37,14 @@ func DisplayDashboard(c echo.Context) error {
 	domains, err := clients.Cloudflare.AvailableDomains()
 	if err != nil {
 		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	userID := getUserID(c)
 	hostnames, err := database.GetAllHostnames(userID)
 	if err != nil {
 		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	var hosts []HostData
