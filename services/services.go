@@ -7,6 +7,7 @@ import (
 	"github.com/sharify-labs/spine/database"
 	"github.com/sharify-labs/spine/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"strings"
 )
 
@@ -44,7 +45,9 @@ func NewHostDTO(hostname string, userID string) *HostDTO {
 
 func (h *HostDTO) dnsRecord() *models.DnsRecord {
 	var record models.DnsRecord
-	err := database.DB().Where(&models.DnsRecord{Hostname: h.Full}).First(&record).Error
+	err := database.DB().Clauses(clause.Locking{Strength: "SHARE"}).Where(
+		&models.DnsRecord{Hostname: h.Full},
+	).First(&record).Error
 	if err != nil {
 		return nil
 	}
@@ -59,6 +62,7 @@ func (h *HostDTO) sendToCF() error {
 	}
 
 	// Store DNS Record in Database
+	// TODO: Double-check no lock is necessary here.
 	err = database.DB().Create(&models.DnsRecord{
 		ID:       record.ID,
 		ZoneID:   record.ZoneID,
@@ -81,7 +85,13 @@ func (h *HostDTO) sendToCF() error {
 func (h *HostDTO) sendToDB() error {
 	record := h.dnsRecord()
 	if record != nil {
-		return database.DB().Create(&models.Host{
+		// Lock dns_records table from getting updated while creating host
+		// to ensure host is not getting created with invalid dns_record.ID
+		// Unsure if this is correct but makes sense to me.
+		return database.DB().Clauses(clause.Locking{
+			Strength: "SHARE",
+			Table:    clause.Table{Name: "dns_records"},
+		}).Create(&models.Host{
 			DnsRecordID: record.ID,
 			UserID:      h.UserID,
 			Root:        h.Root,
@@ -99,9 +109,10 @@ func (h *HostDTO) removeFromCF() error {
 		}
 		// Successfully removed CNAME DNS Record from Cloudflare
 		// -> Remove DnsRecord entry from Database too
-		if err := database.DB().Where(
-			&models.DnsRecord{Hostname: h.Full},
-		).Delete(&models.DnsRecord{}).Error; err != nil {
+		// Lock dns_records table to prevent multiple txs from trying to delete the same record.
+		if err := database.DB().Clauses(clause.Locking{
+			Strength: "UPDATE", Table: clause.Table{Name: clause.CurrentTable},
+		}).Where(&models.DnsRecord{Hostname: h.Full}).Delete(&models.DnsRecord{}).Error; err != nil {
 			// Cloudflare removal success but can't remove DnsRecord from database
 			// TODO: Although rare, it's possible so need to add cleanup/rollback here too.
 			return err
@@ -112,7 +123,11 @@ func (h *HostDTO) removeFromCF() error {
 	return fmt.Errorf("failed to delete %s from cloudflare: database is missing dns record", h.Full)
 }
 func (h *HostDTO) removeFromDB() error {
-	return database.DB().Where(&models.Host{
+	// Lock hosts table to prevent multiple txs from trying to delete the same host.
+	return database.DB().Clauses(clause.Locking{
+		Strength: "UPDATE",
+		Table:    clause.Table{Name: clause.CurrentTable},
+	}).Where(&models.Host{
 		Sub:    h.Sub,
 		Root:   h.Root,
 		UserID: h.UserID,
@@ -149,7 +164,11 @@ func (h *HostDTO) Delete() error {
 		unique          = false
 		missingDBRecord = false
 	)
-	err := database.DB().Model(&models.Host{}).Where(&models.Host{Sub: h.Sub, Root: h.Root}).Count(&count).Error
+	// Lock hosts table from getting updated while counting records to prevent race condition (I think?)
+	err := database.DB().Clauses(clause.Locking{
+		Strength: "SHARE",
+		Table:    clause.Table{Name: "hosts"},
+	}).Model(&models.Host{}).Where(&models.Host{Sub: h.Sub, Root: h.Root}).Count(&count).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
