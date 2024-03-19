@@ -3,7 +3,7 @@ package handlers
 import (
 	"bytes"
 	"fmt"
-	"github.com/goccy/go-json"
+	goccy "github.com/goccy/go-json"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/sharify-labs/spine/clients"
@@ -55,7 +55,7 @@ func DisplayGallery(c echo.Context) error {
 		storeKeys = append(storeKeys, u.StorageKey)
 	}
 
-	rqBody, err := json.Marshal(storeKeys)
+	rqBody, err := goccy.Marshal(storeKeys)
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -71,7 +71,7 @@ func DisplayGallery(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	var base64Images []string
-	if err = json.Unmarshal(respBody, &base64Images); err != nil {
+	if err = goccy.Unmarshal(respBody, &base64Images); err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -82,11 +82,11 @@ func DisplayGallery(c echo.Context) error {
 // Domains are fetched from Cloudflare on each request.
 // TODO: Cache this in Redis (12-24 hours sounds reasonable)
 func ListAvailableDomains(c echo.Context) error {
-	domains, err := clients.Cloudflare.AvailableDomains()
-	if err != nil {
+	if domains, err := clients.Cloudflare.AvailableDomains(); err != nil {
 		return c.NoContent(http.StatusInternalServerError)
+	} else {
+		return c.JSON(http.StatusOK, domains)
 	}
-	return c.JSON(http.StatusOK, domains)
 }
 
 // ListHosts returns a JSON array of all hosts registered by a given user.

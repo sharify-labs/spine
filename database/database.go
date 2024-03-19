@@ -3,24 +3,39 @@ package database
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/gofiber/storage/memory/v2"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/models"
 	"github.com/sharify-labs/spine/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
+	"time"
 )
 
 // db MySQL/MariaDB gorm connector
+// cache local memory storage connector
 var (
-	db *gorm.DB
+	db    *gorm.DB
+	cache *memory.Storage
 )
 
 func Setup() {
-	connectSQL()
+	connectDB()
+	connectCache()
 }
 
-func connectSQL() {
+// DB retrieves gorm connector for SQL Database.
+func DB() *gorm.DB {
+	return db
+}
+
+// Cache retrieves memory storage connector used for caching.
+func Cache() *memory.Storage {
+	return cache
+}
+
+func connectDB() {
 	var err error
 
 	db, err = gorm.Open(mysql.New(mysql.Config{
@@ -54,8 +69,8 @@ func connectSQL() {
 	}
 }
 
-func DB() *gorm.DB {
-	return db
+func connectCache() {
+	cache = memory.New(memory.Config{GCInterval: time.Minute * 5})
 }
 
 func getAllHosts(userID string) ([]*models.Host, error) {
