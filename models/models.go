@@ -4,12 +4,13 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"strings"
+	"time"
 )
 
-// Upload represents an upload to our app.
 type Upload struct {
 	gorm.Model
-	ID         uint   `gorm:"primaryKey;autoIncrement"`
+	ID         uint `gorm:"primaryKey;autoIncrement"`
+	Exp        *time.Time
 	StorageKey string `gorm:"not null"`
 	UserID     string `gorm:"index"` // fk -> User.ID
 	User       User   // required for M-1 relationship (I think)
