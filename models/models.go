@@ -100,7 +100,7 @@ type ShareXConfig struct {
 	Parameters      Parameters `json:"Parameters"`
 	Headers         Headers    `json:"Headers"`
 	Body            string     `json:"Body"`
-	FileForm        string     `json:"FileForm"`
+	FileFormName    string     `json:"FileFormName"`
 }
 
 // Parameters represents the parameters for the ShareXConfig.
