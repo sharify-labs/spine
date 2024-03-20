@@ -11,6 +11,7 @@ import (
 	"github.com/sharify-labs/spine/config"
 	"net/http"
 	"os"
+	"time"
 )
 
 func Setup(e *echo.Echo, assets embed.FS) {
@@ -33,7 +34,10 @@ func Setup(e *echo.Echo, assets embed.FS) {
 			Root:       "assets/static",
 			Filesystem: http.FS(assets),
 		}),
-		sentryecho.New(sentryecho.Options{Repanic: true}),
+		sentryecho.New(sentryecho.Options{
+			Timeout: 3 * time.Second,
+			Repanic: true,
+		}),
 		session.Middleware(sessStore),
 	)
 }
