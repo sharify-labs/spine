@@ -161,8 +161,8 @@ func ProvideConfig(c echo.Context) error {
 			UploadUser:  userId,
 			UploadToken: "CHANGE ME",
 		},
-		Body:     "MultipartFormData",
-		FileForm: "file",
+		Body:         "MultipartFormData",
+		FileFormName: "file",
 	}
 
 	userConfigContent, err := json.Marshal(userConfig)
