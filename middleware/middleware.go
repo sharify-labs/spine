@@ -16,7 +16,10 @@ import (
 
 func Setup(e *echo.Echo, assets embed.FS) {
 	// Init Gothic for oAuth2
-	sessStore := sessions.NewCookieStore([]byte("secret")) // TODO: Secure this
+	sessStore := sessions.NewCookieStore(
+		config.GetDecodeB64("SESSION_AUTH_KEY_64"),
+		config.GetDecodeB64("SESSION_ENC_KEY_32"),
+	)
 	gothic.Store = sessStore
 
 	// Init middleware

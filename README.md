@@ -22,3 +22,4 @@ go install github.com/cosmtrek/air@latest
 - Client IP address filtering for Cloudflare token for added security
 - Cloudflare API is rate limited at 1200requests/5minutes/account. Ensure we can handle that.
   - Consider batching CNAME create/delete requests
+- Consider using Hashicorp Vault for storing secrets
