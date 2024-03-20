@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth"
@@ -15,7 +16,6 @@ import (
 	"github.com/sharify-labs/spine/router"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -78,9 +78,9 @@ func Start(assets embed.FS, version string) {
 
 	// Start app
 	go func() {
-		log.Println("Started Spine v" + version)
+		fmt.Println("Started Spine v" + version)
 		if err := e.Start(":" + config.GetStr("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			e.Logger.Fatal("shutting down server")
+			e.Logger.Fatalf("shutting down server: %v", err)
 		}
 	}()
 
