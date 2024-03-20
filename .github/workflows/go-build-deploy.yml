@@ -16,7 +16,7 @@ jobs:
   build_deploy:
     runs-on: ubuntu-latest
     env:
-      FILE_NAME: spine-${{ github.ref_name }}.bin
+      BINARY_NAME: spine-${{ github.ref_name }}.bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,18 +30,18 @@ jobs:
         run: >-
           env CGO_ENABLED=0 
           go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" 
-          -o "bin/${{ env.FILE_NAME }}" .
+          -o "${{ env.BINARY_NAME }}" .
 
       - name: Write checksum
         run: |
-          sha256sum bin/${{ env.FILE_NAME }} > bin/${{ env.FILE_NAME }}.checksum
+          sha256sum ${{ env.BINARY_NAME }} > ${{ env.BINARY_NAME }}.checksum
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           name: v${{ github.ref_name }}
           files: |
-            bin/${{ env.FILE_NAME }}
-            bin/${{ env.FILE_NAME }}.checksum
+            ${{ env.BINARY_NAME }}
+            ${{ env.BINARY_NAME }}.checksum
           make_latest: true
           fail_on_unmatched_files: true
