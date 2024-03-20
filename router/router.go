@@ -44,7 +44,7 @@ func Setup(e *echo.Echo) {
 	api := e.Group("/api", mw.IsAuthenticated)
 	{
 		api.GET("/reset-token", handlers.ResetToken)
-		api.GET("/gallery", handlers.DisplayGallery)
+		//api.GET("/gallery", handlers.DisplayGallery)
 
 		domains := api.Group("/domains")
 		{
