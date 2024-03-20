@@ -5,6 +5,6 @@ build:
 
 keys:
 	@echo "Generating keys..."
-	@echo "SESSION_AUTH_KEY_64='$(shell openssl rand -base64 64)'" >> .env
-	@echo "SESSION_ENC_KEY_32='$(shell openssl rand -base64 32)'" >> .env
+	@echo "SESSION_AUTH_KEY_64='$(shell openssl rand -base64 64 | tr -d '\n')'" >> .env
+	@echo "SESSION_ENC_KEY_32='$(shell openssl rand -base64 32 | tr -d '\n')'" >> .env
 	@echo "Keys generated and saved to .env"

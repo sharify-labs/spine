@@ -17,8 +17,8 @@ import (
 func Setup(e *echo.Echo, assets embed.FS) {
 	// Init Gothic for oAuth2
 	sessStore := sessions.NewCookieStore(
-		config.GetDecodeB64("SESSION_AUTH_KEY_64"),
-		config.GetDecodeB64("SESSION_ENC_KEY_32"),
+		config.GetDecodeB64("SESSION_AUTH_KEY_64", 64),
+		config.GetDecodeB64("SESSION_ENC_KEY_32", 32),
 	)
 	gothic.Store = sessStore
 

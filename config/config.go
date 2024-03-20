@@ -26,13 +26,15 @@ func GetStr(key string) string {
 	return value
 }
 
-func GetDecodeB64(key string) []byte {
+// GetDecodeB64 reads a string from environmental variables and decodes it with base64.
+// It is used for reading secrets and includes a length arg for safety to ensure secret is desired length.
+func GetDecodeB64(key string, length int) []byte {
 	value, err := base64.StdEncoding.DecodeString(GetStr(key))
 	if err != nil {
 		panic(err)
 	}
-	if len(value) == 0 {
-		panic("empty base64 output for " + key)
+	if len(value) != length {
+		panic("base64 string for " + key + " is not expected length " + strconv.Itoa(length))
 	}
 	return value
 }
