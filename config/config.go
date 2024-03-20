@@ -2,11 +2,11 @@ package config
 
 import (
 	"embed"
+	"encoding/base64"
 	"fmt"
 	goccy "github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
 	"io/fs"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -21,7 +21,18 @@ const (
 func GetStr(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Missing config value for %s", key)
+		panic("missing config value for " + key)
+	}
+	return value
+}
+
+func GetDecodeB64(key string) []byte {
+	value, err := base64.StdEncoding.DecodeString(GetStr(key))
+	if err != nil {
+		panic(err)
+	}
+	if len(value) == 0 {
+		panic("empty base64 output for " + key)
 	}
 	return value
 }
@@ -29,11 +40,11 @@ func GetStr(key string) string {
 func GetInt(key string) int {
 	valueStr := os.Getenv(key)
 	if valueStr == "" {
-		log.Fatalf("Missing config value for %s", key)
+		panic("missing config value for " + key)
 	}
 	valueInt, err := strconv.Atoi(valueStr)
 	if err != nil {
-		log.Fatalf("Invalid integer value for %s: %s", key, valueStr)
+		panic("invalid integer value for " + key)
 	}
 	return valueInt
 }
@@ -41,11 +52,11 @@ func GetInt(key string) int {
 func GetBool(key string) bool {
 	valueStr := os.Getenv(key)
 	if valueStr == "" {
-		log.Fatalf("Missing config value for %s", key)
+		panic("missing config value for " + key)
 	}
 	valueBool, err := strconv.ParseBool(valueStr)
 	if err != nil {
-		log.Fatalf("Invalid boolean value for %s: %s", key, valueStr)
+		panic("invalid integer boolean for " + key)
 	}
 	return valueBool
 }
@@ -53,7 +64,7 @@ func GetBool(key string) bool {
 func GetList(key string) []string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Fatalf("Missing config value for %s", key)
+		panic("missing config value for " + key)
 	}
 	return strings.Split(value, ",")
 }
@@ -65,12 +76,12 @@ func GetTrustedProxyRanges(assets embed.FS) []echo.TrustOption {
 
 	file, err := fs.ReadFile(assets, path)
 	if err != nil {
-		log.Fatalf("Unable to read %s", path)
+		panic("unable to read " + path)
 	}
 
 	err = goccy.Unmarshal(file, &ipRanges)
 	if err != nil {
-		log.Fatalf("Unable to unmarshal %s", path)
+		panic("unable to unmarshal " + path)
 	}
 
 	var ipNet *net.IPNet
