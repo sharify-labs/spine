@@ -34,7 +34,7 @@ jobs:
 
       - name: Write checksum
         run: |
-          echo "$(sha256sum bin/${{ env.FILE_NAME }} | awk '{print $1}')" > bin/${{ env.FILE_NAME }}.checksum
+          sha256sum bin/${{ env.FILE_NAME }} > bin/${{ env.FILE_NAME }}.checksum
 
       - name: Create release
         uses: softprops/action-gh-release@v2
