@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	UserHeader  string = "X-Upload-User"
-	TokenHeader string = "X-Upload-Token"
-	HostHeader  string = "X-Upload-Host"
+	UserHeader string = "X-Upload-User"
+	HostHeader string = "X-Upload-Host"
 )
 
 func GetStr(key string) string {
