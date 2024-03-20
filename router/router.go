@@ -20,6 +20,9 @@ import (
 // GET     /dashboard        -> handlers.DisplayDashboard
 // GET     /api/reset-token  -> handlers.ResetToken
 // GET     /api/gallery      -> handlers.DisplayGallery
+// GET	   /api/config       -> handlers.ProvideConfig
+//
+// GET	   /api/domains      -> handlers.ListAvailableDomains
 //
 // GET     /api/hosts        -> handlers.ListHosts
 // POST    /api/hosts        -> handlers.CreateHost
@@ -45,6 +48,7 @@ func Setup(e *echo.Echo) {
 	{
 		api.GET("/reset-token", handlers.ResetToken)
 		//api.GET("/gallery", handlers.DisplayGallery)
+		api.GET("/config", handlers.ProvideConfig)
 
 		domains := api.Group("/domains")
 		{

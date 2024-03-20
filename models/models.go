@@ -89,3 +89,29 @@ type Plan struct {
 	MaxHosts   int     `gorm:"not null"`
 	MaxUploads int     `gorm:"not null"`
 }
+
+// ShareXConfig represents the configuration file for ShareX.
+type ShareXConfig struct {
+	Version         string     `json:"Version"`
+	Name            string     `json:"Name"`
+	DestinationType string     `json:"DestinationType"`
+	RequestMethod   string     `json:"RequestMethod"`
+	RequestURL      string     `json:"RequestURL"`
+	Parameters      Parameters `json:"Parameters"`
+	Headers         Headers    `json:"Headers"`
+	Body            string     `json:"Body"`
+	FileForm        string     `json:"FileForm"`
+}
+
+// Parameters represents the parameters for the ShareXConfig.
+type Parameters struct {
+	Host       string `json:"Host"`
+	CustomPath string `json:"CustomPath"`
+	MaxHours   int    `json:"MaxHours"`
+}
+
+// Headers represents the headers for the ShareXConfig.
+type Headers struct {
+	UploadUser  string `json:"UploadUser"`
+	UploadToken string `json:"UploadToken"`
+}

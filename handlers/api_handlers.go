@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	goccy "github.com/goccy/go-json"
 	"github.com/labstack/echo-contrib/session"
@@ -9,6 +10,7 @@ import (
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/database"
+	"github.com/sharify-labs/spine/models"
 	"github.com/sharify-labs/spine/security"
 	"github.com/sharify-labs/spine/services"
 	"github.com/sharify-labs/spine/utils"
@@ -138,4 +140,38 @@ func DeleteHost(c echo.Context) error {
 	}
 
 	return echo.NewHTTPError(http.StatusInternalServerError, "Hostname format must be sub.root.tld")
+}
+
+// ProvideConfig returns a ShareX config file for the user.
+func ProvideConfig(c echo.Context) error {
+	userId := getUserID(c)
+
+	userConfig := &models.ShareXConfig{
+		Version:         "4.3.0",
+		Name:            "Sharify (Image)",
+		DestinationType: "ImageUploader, TextUploader, FileUploader",
+		RequestMethod:   "POST",
+		RequestURL:      "https://xericl.dev/api/v1/share",
+		Parameters: models.Parameters{
+			Host:       "CHANGE ME",
+			CustomPath: "CHANGE ME",
+			MaxHours:   0,
+		},
+		Headers: models.Headers{
+			UploadUser:  userId,
+			UploadToken: "CHANGE ME",
+		},
+		Body:     "MultipartFormData",
+		FileForm: "file",
+	}
+
+	userConfigContent, err := json.Marshal(userConfig)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
+	}
+
+	c.Response().Header().Set(echo.HeaderContentDisposition, "attachment; filename="+userId+".sxcu")
+	c.Response().Header().Set(echo.HeaderContentType, "application/octet-stream")
+
+	return c.Blob(http.StatusOK, "application/octet-stream", userConfigContent)
 }
