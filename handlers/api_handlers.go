@@ -34,7 +34,7 @@ func ResetToken(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	if err = database.UpdateUserToken(userID, token.Hash, token.Salt); err != nil {
+	if err = token.AssignToUser(userID); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
@@ -164,6 +164,10 @@ func ProvideConfig(c echo.Context) error {
 		Body:         "MultipartFormData",
 		FileFormName: "file",
 	}
+	if err = token.AssignToUser(userId); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
+	}
+	uConfig.Headers.UploadToken = token.Value
 
 	userConfigContent, err := json.Marshal(userConfig)
 	if err != nil {

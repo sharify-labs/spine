@@ -4,12 +4,13 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"github.com/google/uuid"
+	"github.com/sharify-labs/spine/database"
 )
 
 type ZephyrToken struct {
 	Value string
-	Salt  []byte
-	Hash  []byte
+	salt  []byte
+	hash  []byte
 }
 
 // NewZephyrToken generates a new upload token. Does NOT store it in database.
@@ -21,9 +22,13 @@ func NewZephyrToken() (*ZephyrToken, error) {
 	}
 	return &ZephyrToken{
 		Value: value,
-		Salt:  salt,
-		Hash:  hashToken(value, salt),
+		salt:  salt,
+		hash:  hashToken(value, salt),
 	}, nil
+}
+
+func (zt *ZephyrToken) AssignToUser(userID string) error {
+	return database.UpdateUserToken(userID, zt.hash, zt.salt)
 }
 
 // generateSalt generates n bytes randomly and securely

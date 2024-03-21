@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	UserHeader string = "X-Upload-User"
-	HostHeader string = "X-Upload-Host"
+	UserHeader  string = "X-Upload-User"
+	HostHeader  string = "X-Upload-Host"
+	DefaultHost string = "sharify.me"
 )
 
 func GetStr(key string) string {
