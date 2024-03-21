@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	goccy "github.com/goccy/go-json"
 	"github.com/labstack/echo-contrib/session"
@@ -16,6 +15,7 @@ import (
 	"github.com/sharify-labs/spine/utils"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func getUserID(c echo.Context) string {
@@ -144,33 +144,53 @@ func DeleteHost(c echo.Context) error {
 }
 
 // ProvideConfig returns a ShareX config file for the user.
+// Note: It also regenerates their upload token.
 func ProvideConfig(c echo.Context) error {
 	userId := getUserID(c)
 
-	userConfig := &models.ShareXConfig{
-		Version:         "4.3.0",
+	hostnames, err := database.GetAllHostnames(userId)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError)
+	}
+
+	uConfig := models.ShareXConfig{
+		Version:         "16.0.1",
 		Name:            "Sharify (Image)",
 		DestinationType: "ImageUploader, TextUploader, FileUploader",
 		RequestMethod:   "POST",
 		RequestURL:      "https://xericl.dev/api/v1/share",
-		Parameters: models.Parameters{
-			Host:       "CHANGE ME",
-			CustomPath: "CHANGE ME",
-			MaxHours:   0,
-		},
-		Headers: models.Headers{
-			UploadUser:  userId,
-			UploadToken: "CHANGE ME",
-		},
-		Body:         "MultipartFormData",
-		FileFormName: "file",
+		Body:            "MultipartFormData",
+		FileFormName:    "file",
+		URL:             "{json:url}",
+		ErrorMessage:    "{json:message}",
+	}
+
+	switch len(hostnames) {
+	case 0:
+		uConfig.Parameters.Host = config.DefaultHost
+	case 1:
+		uConfig.Parameters.Host = hostnames[0]
+	default:
+		// TODO: Make it optional for users to select "randomize" from the menu when generating config
+		// 		 In those cases, replace 'select' with 'random'
+		uConfig.Parameters.Host = fmt.Sprintf("{select:%s}", strings.Join(hostnames, "|"))
+	}
+
+	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
+	uConfig.Parameters.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
+	uConfig.Parameters.MaxHours = "{prompt:Enter number of hours until upload expires or press OK for permanent|}"
+	uConfig.Headers.UploadUser = userId
+
+	token, err := security.NewZephyrToken()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	if err = token.AssignToUser(userId); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	uConfig.Headers.UploadToken = token.Value
 
-	userConfigContent, err := json.Marshal(userConfig)
+	userConfigContent, err := goccy.MarshalIndent(uConfig, "", "\t")
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
