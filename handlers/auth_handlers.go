@@ -6,7 +6,6 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/sharify-labs/spine/database"
-	"github.com/sharify-labs/spine/models"
 	"net/http"
 )
 
@@ -36,14 +35,13 @@ func DiscordAuthCallback(c echo.Context) error {
 	sess.Values["discord_email"] = authUser.Email
 
 	// Ensure user is entered into Database
-	var u *models.User
-	u, err = database.GetOrCreateUser(authUser.Email)
+	user, err := database.GetOrCreateUser(authUser.Email)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	// Store UserID in session
-	sess.Values["user_id"] = u.ID
+	sess.Values["user_id"] = user.ID
 
 	// Save session
 	err = sess.Save(c.Request(), c.Response())

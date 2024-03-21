@@ -2,10 +2,10 @@ package database
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/sharify-labs/spine/config"
-	"github.com/sharify-labs/spine/models"
 	"github.com/sharify-labs/spine/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -57,12 +57,12 @@ func connectDB() {
 
 	// Migrations
 	err = db.AutoMigrate(
-		&models.User{},
-		&models.Plan{},
-		&models.Token{},
-		&models.Upload{},
-		&models.Host{},
-		&models.DnsRecord{},
+		&User{},
+		&Plan{},
+		&Token{},
+		&Upload{},
+		&Host{},
+		&DnsRecord{},
 	)
 	if err != nil {
 		panic(err)
@@ -73,11 +73,13 @@ func connectCache() {
 	cache = memory.New(memory.Config{GCInterval: time.Minute * 5})
 }
 
-func getAllHosts(userID string) ([]*models.Host, error) {
-	var hosts []*models.Host
-	err := db.Where(&models.Host{UserID: userID}).Find(&hosts).Error
+func getAllHosts(userID string) ([]*Host, error) {
+	var hosts []*Host
+	err := db.Where(&Host{UserID: userID}).Find(&hosts).Error
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
 	}
 	return hosts, nil
 }
@@ -94,18 +96,18 @@ func GetAllHostnames(userID string) ([]string, error) {
 	return names, nil
 }
 
-func GetUserUploads(userID string) ([]*models.Upload, error) {
-	var uploads []*models.Upload
-	err := db.Where(&models.Upload{UserID: userID}).Find(&uploads).Error
+func GetUserUploads(userID string) ([]*Upload, error) {
+	var uploads []*Upload
+	err := db.Where(&Upload{UserID: userID}).Find(&uploads).Error
 	if err != nil {
 		return nil, err
 	}
 	return uploads, nil
 }
 
-func GetOrCreateUser(email string) (*models.User, error) {
-	var user models.User
-	err := db.Where(&models.User{
+func GetOrCreateUser(email string) (*User, error) {
+	var user User
+	err := db.Where(&User{
 		Email: strings.TrimSpace(strings.ToLower(email)),
 	}).FirstOrCreate(&user).Error
 	if err != nil {
@@ -117,8 +119,8 @@ func GetOrCreateUser(email string) (*models.User, error) {
 // UpdateUserToken retrieves user and updates their upload-key.
 // TODO: Modify this so it's done in 1 query
 func UpdateUserToken(userID string, hash []byte, salt []byte) error {
-	token := models.Token{}
-	err := db.Where(&models.Token{UserID: userID}).FirstOrCreate(&token).Error
+	token := Token{}
+	err := db.Where(&Token{UserID: userID}).FirstOrCreate(&token).Error
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/database"
-	"github.com/sharify-labs/spine/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"strings"
@@ -41,10 +40,10 @@ func NewHostDTO(hostname string, userID string) *HostDTO {
 	}
 }
 
-func (h *HostDTO) dnsRecord() *models.DnsRecord {
-	var record models.DnsRecord
+func (h *HostDTO) dnsRecord() *database.DnsRecord {
+	var record database.DnsRecord
 	err := database.DB().Clauses(clause.Locking{Strength: "SHARE"}).Where(
-		&models.DnsRecord{Hostname: h.Full},
+		&database.DnsRecord{Hostname: h.Full},
 	).First(&record).Error
 	if err != nil {
 		return nil
@@ -61,7 +60,7 @@ func (h *HostDTO) sendToCF() error {
 
 	// Store DNS Record in Database
 	// TODO: Double-check no lock is necessary here.
-	err = database.DB().Create(&models.DnsRecord{
+	err = database.DB().Create(&database.DnsRecord{
 		ID:       record.ID,
 		ZoneID:   record.ZoneID,
 		Hostname: h.Full,
@@ -89,7 +88,7 @@ func (h *HostDTO) sendToDB() error {
 		return database.DB().Clauses(clause.Locking{
 			Strength: "SHARE",
 			Table:    clause.Table{Name: "dns_records"},
-		}).Create(&models.Host{
+		}).Create(&database.Host{
 			DnsRecordID: record.ID,
 			UserID:      h.UserID,
 			Root:        h.Root,
@@ -110,7 +109,7 @@ func (h *HostDTO) removeFromCF() error {
 		// Lock dns_records table to prevent multiple txs from trying to delete the same record.
 		if err := database.DB().Clauses(clause.Locking{
 			Strength: "UPDATE", Table: clause.Table{Name: clause.CurrentTable},
-		}).Where(&models.DnsRecord{Hostname: h.Full}).Delete(&models.DnsRecord{}).Error; err != nil {
+		}).Where(&database.DnsRecord{Hostname: h.Full}).Delete(&database.DnsRecord{}).Error; err != nil {
 			// Cloudflare removal success but can't remove DnsRecord from database
 			// TODO: Although rare, it's possible so need to add cleanup/rollback here too.
 			return err
@@ -125,11 +124,11 @@ func (h *HostDTO) removeFromDB() error {
 	return database.DB().Clauses(clause.Locking{
 		Strength: "UPDATE",
 		Table:    clause.Table{Name: clause.CurrentTable},
-	}).Where(&models.Host{
+	}).Where(&database.Host{
 		Sub:    h.Sub,
 		Root:   h.Root,
 		UserID: h.UserID,
-	}).Delete(&models.Host{}).Error
+	}).Delete(&database.Host{}).Error
 }
 
 // Register writes the host to the database and creates a Cloudflare CNAME entry.
@@ -163,7 +162,7 @@ func (h *HostDTO) Delete() error {
 	err := database.DB().Clauses(clause.Locking{
 		Strength: "SHARE",
 		Table:    clause.Table{Name: "hosts"},
-	}).Model(&models.Host{}).Where(&models.Host{
+	}).Model(&database.Host{}).Where(&database.Host{
 		Sub:  h.Sub,
 		Root: h.Root,
 	}).Count(&count).Error
