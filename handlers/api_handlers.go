@@ -104,7 +104,8 @@ func ListHosts(c echo.Context) error {
 // CreateHost creates new hosts for a user.
 // Root domain must be registered first. This can be checked with ListDomainsHandler.
 func CreateHost(c echo.Context) error {
-	hostname := utils.CompileHostname(c.FormValue("subDomain"), c.FormValue("rootDomain"))
+	sub := utils.SanitizeSubdomain(c.FormValue("subDomain"))
+	hostname := utils.CompileHostname(sub, c.FormValue("rootDomain")) // TODO: Make sure rootDomain came from the list of available domains and is not being injected some other way.
 	userID := getUserID(c)
 
 	host := services.NewHostDTO(hostname, userID)
