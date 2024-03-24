@@ -39,18 +39,9 @@ func connectDB() {
 	var err error
 
 	db, err = gorm.Open(mysql.New(mysql.Config{
+		DSN:           config.Str("MYSQL_DSN"),
 		ServerVersion: "MariaDB",
-		DSN: fmt.Sprintf(
-			"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-			config.GetStr("MYSQL_USER"),
-			config.GetStr("MYSQL_PASS"),
-			config.GetStr("MYSQL_HOST"),
-			config.GetStr("MYSQL_PORT"),
-			config.GetStr("MYSQL_DB"),
-		),
-	}),
-		&gorm.Config{TranslateError: true},
-	)
+	}), &gorm.Config{TranslateError: true})
 	if err != nil {
 		panic(err)
 	}
