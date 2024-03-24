@@ -7,22 +7,26 @@ import (
 	"time"
 )
 
+// StorageKey represents a used R2 key.
+// The purpose of this table is to keep a running log of all used keys.
+// The rows in this table cannot be deleted.
+// This is to prevent users from reusing old host/secret combinations.
+// Note: This table is disconnected from user data,
+// allowing us to keep it even if a user purges their account.
+// ID: Represents the value of the storage key (SHA-512 hash).
+type StorageKey struct {
+	gorm.Model
+	ID string `gorm:"primaryKey;<-:create"` // allow read and create
+}
+
+// Upload represents an upload to our app.
 type Upload struct {
 	gorm.Model
 	ID         uint `gorm:"primaryKey;autoIncrement"`
 	Exp        *time.Time
-	StorageKey string `gorm:"not null"`
+	StorageKey string `gorm:"unique;not null"`
 	UserID     string `gorm:"index"` // fk -> User.ID
 	User       User   // required for M-1 relationship (I think)
-}
-
-// Token represents a User's upload token.
-type Token struct {
-	gorm.Model
-	ID     uint   `gorm:"primaryKey;autoIncrement"`
-	Hash   string `gorm:"unique;not null"`
-	Salt   string `gorm:"not null"`
-	UserID string `gorm:"index"` // fk -> User.ID
 }
 
 // Host represents a FQDN that a User can upload to.
@@ -65,13 +69,13 @@ func (dr *DnsRecord) BeforeCreate(_ *gorm.DB) (err error) {
 // User represents a person registered on our platform.
 type User struct {
 	gorm.Model
-	ID      string `gorm:"primaryKey"`
-	Email   string `gorm:"unique;not null"`
-	PlanID  *uint  // temp nullable
-	Plan    *Plan  // temp nullable
-	Token   Token
-	Hosts   []Host
-	Uploads []Upload
+	ID        string `gorm:"primaryKey"`
+	Email     string `gorm:"unique;not null"`
+	TokenHash string
+	PlanID    *uint // temp nullable
+	Plan      *Plan // temp nullable
+	Hosts     []Host
+	Uploads   []Upload
 }
 
 func (u *User) BeforeCreate(_ *gorm.DB) (err error) {

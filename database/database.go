@@ -57,9 +57,9 @@ func connectDB() {
 
 	// Migrations
 	err = db.AutoMigrate(
+		&StorageKey{},
 		&User{},
 		&Plan{},
-		&Token{},
 		&Upload{},
 		&Host{},
 		&DnsRecord{},
@@ -114,18 +114,4 @@ func GetOrCreateUser(email string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
-}
-
-// UpdateUserToken retrieves user and updates their upload-key.
-// TODO: Modify this so it's done in 1 query
-func UpdateUserToken(userID string, hash []byte, salt []byte) error {
-	token := Token{}
-	err := db.Where(&Token{UserID: userID}).FirstOrCreate(&token).Error
-	if err != nil {
-		return err
-	}
-	token.Hash = base64.URLEncoding.EncodeToString(hash)
-	token.Salt = base64.URLEncoding.EncodeToString(salt)
-
-	return db.Save(&token).Error
 }

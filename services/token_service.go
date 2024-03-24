@@ -2,13 +2,15 @@ package services
 
 import (
 	"crypto/rand"
-	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"github.com/sharify-labs/spine/database"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm/clause"
 )
 
 type ZephyrToken struct {
 	Value string
-	salt  []byte
 	hash  []byte
 }
 
@@ -24,13 +26,17 @@ func NewZephyrToken() (*ZephyrToken, error) {
 	}
 	return &ZephyrToken{
 		Value: value,
-		salt:  salt,
-		hash:  hashToken(value, salt),
+		hash:  hash,
 	}, nil
 }
 
 func (zt *ZephyrToken) AssignToUser(userID string) error {
-	return database.UpdateUserToken(userID, zt.hash, zt.salt)
+	return database.DB().Clauses(clause.Locking{
+		Strength: "UPDATE",
+	}).Save(&database.User{
+		ID:        userID,
+		TokenHash: base64.URLEncoding.EncodeToString(zt.hash),
+	}).Error
 }
 
 // GenerateRandomStringHex generates a random hex string with given length
