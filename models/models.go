@@ -30,3 +30,46 @@ type ShareXConfig struct {
 	URL          string `json:"URL"`
 	ErrorMessage string `json:"ErrorMessage"`
 }
+
+type ShareXConfigDetails struct {
+	DestinationType string
+	FileFormName    string
+	UploadPath      string
+}
+
+var mapStrToShareXConfigDetails = map[string]ShareXConfigDetails{
+	"files": {
+		"FileUploader, ImageUploader",
+		"file",
+		"files",
+	},
+	"pastes": {
+		"TextUploader",
+		"paste_content",
+		"pastes",
+	},
+	"redirects": {
+		"URLShortener",
+		"long_url",
+		"redirects",
+	},
+}
+
+// NewShareXConfig creates a ShareXConfig with default values.
+func NewShareXConfig(t string) *ShareXConfig {
+	if uType, exists := mapStrToShareXConfigDetails[t]; !exists {
+		return nil
+	} else {
+		return &ShareXConfig{
+			Version:         "16.0.1",
+			Name:            "Sharify",
+			DestinationType: uType.DestinationType,
+			RequestMethod:   "POST",
+			RequestURL:      "https://xericl.dev/api/v1/" + t,
+			Body:            "MultipartFormData",
+			FileFormName:    uType.FileFormName,
+			URL:             "{json:url}",
+			ErrorMessage:    "{json:message}",
+		}
+	}
+}

@@ -17,10 +17,10 @@ import (
 // GET     /auth/discord/callback  -> handlers.DiscordAuthCallback
 //
 // Protected:
-// GET     /dashboard        -> handlers.DisplayDashboard
-// GET     /api/reset-token  -> handlers.ResetToken
-// GET     /api/gallery      -> handlers.DisplayGallery
-// GET	   /api/config       -> handlers.ProvideConfig
+// GET     /dashboard       	-> handlers.DisplayDashboard
+// GET     /api/reset-token 	-> handlers.ResetToken
+// GET     /api/gallery     	-> handlers.DisplayGallery
+// GET	   /api/config/:type    -> handlers.ProvideConfig  // :type must be files/pastes/redirects
 //
 // GET	   /api/domains      -> handlers.ListAvailableDomains
 //
@@ -48,7 +48,7 @@ func Setup(e *echo.Echo) {
 	{
 		api.GET("/reset-token", handlers.ResetToken)
 		//api.GET("/gallery", handlers.DisplayGallery)
-		api.GET("/config", handlers.ProvideConfig)
+		api.GET("/config/:type", handlers.ProvideConfig)
 
 		domains := api.Group("/domains")
 		{

@@ -147,57 +147,51 @@ func DeleteHost(c echo.Context) error {
 // ProvideConfig returns a ShareX config file for the user.
 // Note: It also regenerates their upload token.
 func ProvideConfig(c echo.Context) error {
-	userId := getUserID(c)
-
-	hostnames, err := database.GetAllHostnames(userId)
+	cfg := models.NewShareXConfig(strings.ToLower(c.Param("type")))
+	if cfg == nil {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+	token, err := services.NewZephyrToken()
 	if err != nil {
+		c.Logger().Error(err)
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
-	uConfig := models.ShareXConfig{
-		Version:         "16.0.1",
-		Name:            "Sharify (Image)",
-		DestinationType: "ImageUploader, TextUploader, FileUploader",
-		RequestMethod:   "POST",
-		RequestURL:      "https://xericl.dev/api/v1/share",
-		Body:            "MultipartFormData",
-		FileFormName:    "file",
-		URL:             "{json:url}",
-		ErrorMessage:    "{json:message}",
+	user := getUserFromSession(c)
+	if err = token.AssignToUser(user.ID); err != nil {
+		c.Logger().Error(err)
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to assign zephyr token to user: %v", err))
+		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
+	cfg.Headers.UploadToken = token.Value
+	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
+	cfg.Parameters.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
+	cfg.Parameters.MaxHours = "{prompt:Enter number of hours until upload expires or press OK for permanent|}"
+	cfg.Headers.UploadUser = user.ID
 
+	hostnames, err := database.GetAllHostnames(user.ID)
+	if err != nil {
+		c.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusInternalServerError)
+	}
 	switch len(hostnames) {
 	case 0:
-		uConfig.Parameters.Host = config.DefaultHost
+		cfg.Parameters.Host = config.DefaultHost
 	case 1:
-		uConfig.Parameters.Host = hostnames[0]
+		cfg.Parameters.Host = hostnames[0]
 	default:
 		// TODO: Make it optional for users to select "randomize" from the menu when generating config
 		// 		 In those cases, replace 'select' with 'random'
-		uConfig.Parameters.Host = fmt.Sprintf("{select:%s}", strings.Join(hostnames, "|"))
+		cfg.Parameters.Host = fmt.Sprintf("{select:%s}", strings.Join(hostnames, "|"))
 	}
 
-	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
-	uConfig.Parameters.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
-	uConfig.Parameters.MaxHours = "{prompt:Enter number of hours until upload expires or press OK for permanent|}"
-	uConfig.Headers.UploadUser = userId
-
-	token, err := security.NewZephyrToken()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-	if err = token.AssignToUser(userId); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-	uConfig.Headers.UploadToken = token.Value
-
-	userConfigContent, err := goccy.MarshalIndent(uConfig, "", "\t")
+	userConfigContent, err := goccy.MarshalIndent(cfg, "", "\t")
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	c.Response().Header().Set(echo.HeaderContentDisposition, "attachment; filename="+userId+".sxcu")
-	c.Response().Header().Set(echo.HeaderContentType, "application/octet-stream")
+	c.Response().Header().Set(echo.HeaderContentDisposition, "attachment; filename="+user.ID+".sxcu")
 
-	return c.Blob(http.StatusOK, "application/octet-stream", userConfigContent)
+	return c.Blob(http.StatusOK, echo.MIMEOctetStream, userConfigContent)
 }
