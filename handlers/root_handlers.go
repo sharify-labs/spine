@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/database"
@@ -27,21 +26,14 @@ type HostData struct {
 }
 
 func DisplayDashboard(c echo.Context) error {
-	sess, _ := session.Get("session", c)
-
-	username, ok := sess.Values["discord_username"].(string)
-	if !ok {
-		return c.Redirect(http.StatusFound, "/login")
-	}
-
 	domains, err := clients.Cloudflare.AvailableDomains()
 	if err != nil {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	userID := getUserID(c)
-	hostnames, err := database.GetAllHostnames(userID)
+	user := getUserFromSession(c)
+	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -55,8 +47,8 @@ func DisplayDashboard(c echo.Context) error {
 	return c.Render(
 		http.StatusOK, "dashboard.html",
 		DashboardData{
-			Username: username,
-			UserID:   userID,
+			Username: user.Discord.Username,
+			UserID:   user.ID,
 			Domains:  domains,
 			Hosts:    hosts,
 		},

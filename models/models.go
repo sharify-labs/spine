@@ -1,5 +1,14 @@
 package models
 
+// AuthorizedUser represents a user who has completed oAuth2.
+type AuthorizedUser struct {
+	ID      string
+	Discord struct {
+		Username string
+		Email    string
+	}
+}
+
 // ShareXConfig represents the configuration file for ShareX.
 type ShareXConfig struct {
 	Version         string `json:"Version"`

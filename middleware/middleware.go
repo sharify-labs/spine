@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"embed"
+	"encoding/gob"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -9,6 +10,7 @@ import (
 	mw "github.com/labstack/echo/v4/middleware"
 	"github.com/markbates/goth/gothic"
 	"github.com/sharify-labs/spine/config"
+	"github.com/sharify-labs/spine/models"
 	"net/http"
 	"os"
 	"time"
@@ -21,6 +23,7 @@ func Setup(e *echo.Echo, assets embed.FS) {
 		config.DecodedB64("SESSION_ENC_KEY_32", 32),
 	)
 	gothic.Store = sessStore
+	gob.Register(models.AuthorizedUser{})
 
 	// Init middleware
 	e.Use(
@@ -49,7 +52,7 @@ func Setup(e *echo.Echo, assets embed.FS) {
 func IsAuthenticated(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sess, err := session.Get("session", c)
-		if err != nil || sess.Values["discord_username"] == nil {
+		if err != nil || sess.Values["auth_user"] == nil {
 			// If the user is not authenticated, redirect.
 			return c.Redirect(http.StatusFound, "/login")
 		}
