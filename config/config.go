@@ -71,31 +71,3 @@ func GetList(key string) []string {
 	}
 	return strings.Split(value, ",")
 }
-
-func GetTrustedProxyRanges(assets embed.FS) []echo.TrustOption {
-	const path string = "assets/cloudflare_ips.json"
-	var out []echo.TrustOption
-	var ipRanges []string
-
-	file, err := fs.ReadFile(assets, path)
-	if err != nil {
-		panic("unable to read " + path)
-	}
-
-	err = goccy.Unmarshal(file, &ipRanges)
-	if err != nil {
-		panic("unable to unmarshal " + path)
-	}
-
-	var ipNet *net.IPNet
-	for _, r := range ipRanges {
-		_, ipNet, err = net.ParseCIDR(r)
-		if err != nil {
-			fmt.Printf("IP range %q could not be parsed: %v\n", r, err)
-		} else {
-			out = append(out, echo.TrustIPRange(ipNet))
-		}
-	}
-
-	return out
-}

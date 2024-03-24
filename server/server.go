@@ -41,11 +41,7 @@ func Start(assets embed.FS, version string) {
 
 	// Create app
 	e := echo.New()
-
-	// Configure trusted proxies
-	e.IPExtractor = echo.ExtractIPFromXFFHeader(config.GetTrustedProxyRanges(assets)...)
-
-	// Setup HTML Template rendering
+	e.IPExtractor = echo.ExtractIPFromXFFHeader() // internal IPs trusted by default
 	e.Renderer = &Template{
 		templates: template.Must(template.ParseFS(assets, "assets/templates/*.html")),
 	}
