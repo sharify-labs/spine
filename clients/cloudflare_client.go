@@ -28,7 +28,7 @@ type cfClient struct {
 
 func (cf *cfClient) Connect() {
 	var err error
-	cf.api, err = cloudflare.NewWithAPIToken(config.GetStr("CLOUDFLARE_API_TOKEN"))
+	cf.api, err = cloudflare.NewWithAPIToken(config.Str("CLOUDFLARE_API_TOKEN"))
 	if err != nil {
 		panic(err)
 	}

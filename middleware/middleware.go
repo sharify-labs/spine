@@ -17,8 +17,8 @@ import (
 func Setup(e *echo.Echo, assets embed.FS) {
 	// Init Gothic for oAuth2
 	sessStore := sessions.NewCookieStore(
-		config.GetDecodeB64("SESSION_AUTH_KEY_64", 64),
-		config.GetDecodeB64("SESSION_ENC_KEY_32", 32),
+		config.DecodedB64("SESSION_AUTH_KEY_64", 64),
+		config.DecodedB64("SESSION_ENC_KEY_32", 32),
 	)
 	gothic.Store = sessStore
 
@@ -31,7 +31,7 @@ func Setup(e *echo.Echo, assets embed.FS) {
 			Output: os.Stdout,
 		}),
 		mw.CORSWithConfig(mw.CORSConfig{
-			AllowOrigins: config.GetList("ALLOW_ORIGINS"),
+			AllowOrigins: config.List("ALLOW_ORIGINS"),
 		}),
 		mw.StaticWithConfig(mw.StaticConfig{
 			Root:       "assets/static",

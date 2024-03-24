@@ -1,13 +1,7 @@
 package config
 
 import (
-	"embed"
 	"encoding/base64"
-	"fmt"
-	goccy "github.com/goccy/go-json"
-	"github.com/labstack/echo/v4"
-	"io/fs"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -19,7 +13,9 @@ const (
 	DefaultHost string = "sharify.me"
 )
 
-func GetStr(key string) string {
+// Str reads in a string variable from environment.
+// Note: Panics if value is empty.
+func Str(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
 		panic("missing config value for " + key)
@@ -27,10 +23,11 @@ func GetStr(key string) string {
 	return value
 }
 
-// GetDecodeB64 reads a string from environmental variables and decodes it with base64.
-// It is used for reading secrets and includes a length arg for safety to ensure secret is desired length.
-func GetDecodeB64(key string, length int) []byte {
-	value, err := base64.StdEncoding.DecodeString(GetStr(key))
+// DecodedB64 reads in a base64-encoded string from environment and decodes it.
+// Additionally, it validates that the result is the expected length.
+// Note: Panics if value is empty.
+func DecodedB64(key string, length int) []byte {
+	value, err := base64.StdEncoding.DecodeString(Str(key))
 	if err != nil {
 		panic(err)
 	}
@@ -40,32 +37,30 @@ func GetDecodeB64(key string, length int) []byte {
 	return value
 }
 
-func GetInt(key string) int {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		panic("missing config value for " + key)
-	}
-	valueInt, err := strconv.Atoi(valueStr)
+// Int reads in a string variable from environment and converts it to an integer.
+// Note: Panics if value is empty.
+func Int(key string) int {
+	value, err := strconv.Atoi(Str(key))
 	if err != nil {
 		panic("invalid integer value for " + key)
 	}
-	return valueInt
+	return value
 }
 
-func GetBool(key string) bool {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		panic("missing config value for " + key)
-	}
-	valueBool, err := strconv.ParseBool(valueStr)
+// Bool reads in a string variable from environment and converts it to a boolean.
+// Note: Panics if value is empty.
+func Bool(key string) bool {
+	value, err := strconv.ParseBool(Str(key))
 	if err != nil {
-		panic("invalid integer boolean for " + key)
+		panic("invalid boolean value for " + key)
 	}
-	return valueBool
+	return value
 }
 
-func GetList(key string) []string {
-	value := os.Getenv(key)
+// List reads in a string variable from environment and splits it where there are commas to create a list.
+// Note: Panics if value is empty.
+func List(key string) []string {
+	value := Str(key)
 	if value == "" {
 		panic("missing config value for " + key)
 	}

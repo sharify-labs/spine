@@ -49,9 +49,9 @@ func Start(assets embed.FS, version string) {
 	// Setup Goth Auth Providers
 	goth.UseProviders(
 		discord.New(
-			config.GetStr("DISCORD_CLIENT_ID"),
-			config.GetStr("DISCORD_CLIENT_SECRET"),
-			config.GetStr("DISCORD_CALLBACK_URL"),
+			config.Str("DISCORD_CLIENT_ID"),
+			config.Str("DISCORD_CLIENT_SECRET"),
+			config.Str("DISCORD_CALLBACK_URL"),
 			"identify", "email",
 		),
 	)
@@ -75,7 +75,7 @@ func Start(assets embed.FS, version string) {
 	// Start app
 	go func() {
 		fmt.Println("Started Spine v" + version)
-		if err := e.Start(":" + config.GetStr("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := e.Start(":" + config.Str("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatalf("shutting down server: %v", err)
 		}
 	}()
