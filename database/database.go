@@ -1,14 +1,13 @@
 package database
 
 import (
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"strings"
 	"time"
 )
@@ -66,7 +65,7 @@ func connectCache() {
 
 func getAllHosts(userID string) ([]*Host, error) {
 	var hosts []*Host
-	err := db.Where(&Host{UserID: userID}).Find(&hosts).Error
+	err := db.Clauses(clause.Locking{Strength: "SHARE"}).Where(&Host{UserID: userID}).Find(&hosts).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
@@ -89,7 +88,7 @@ func GetAllHostnames(userID string) ([]string, error) {
 
 func GetUserUploads(userID string) ([]*Upload, error) {
 	var uploads []*Upload
-	err := db.Where(&Upload{UserID: userID}).Find(&uploads).Error
+	err := db.Clauses(clause.Locking{Strength: "SHARE"}).Where(&Upload{UserID: userID}).Find(&uploads).Error
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +97,8 @@ func GetUserUploads(userID string) ([]*Upload, error) {
 
 func GetOrCreateUser(email string) (*User, error) {
 	var user User
-	err := db.Where(&User{
+	// TODO: Consider using Discord ID too because Discord emails can change.
+	err := db.Clauses(clause.Locking{Strength: "UPDATE"}).Where(&User{
 		Email: strings.TrimSpace(strings.ToLower(email)),
 	}).FirstOrCreate(&user).Error
 	if err != nil {
