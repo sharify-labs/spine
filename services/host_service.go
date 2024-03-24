@@ -84,7 +84,7 @@ func (h *HostDTO) sendToDB() error {
 	if record != nil {
 		// Lock dns_records table from getting updated while creating host
 		// to ensure host is not getting created with invalid dns_record.ID
-		// Unsure if this is correct but makes sense to me.
+		// TODO: Unsure if this is correct but makes sense to me.
 		return database.DB().Clauses(clause.Locking{
 			Strength: "SHARE",
 			Table:    clause.Table{Name: "dns_records"},
@@ -108,8 +108,11 @@ func (h *HostDTO) removeFromCF() error {
 		// -> Remove DnsRecord entry from Database too
 		// Lock dns_records table to prevent multiple txs from trying to delete the same record.
 		if err := database.DB().Clauses(clause.Locking{
-			Strength: "UPDATE", Table: clause.Table{Name: clause.CurrentTable},
-		}).Where(&database.DnsRecord{Hostname: h.Full}).Delete(&database.DnsRecord{}).Error; err != nil {
+			Strength: "UPDATE",
+			Table:    clause.Table{Name: clause.CurrentTable},
+		}).Where(&database.DnsRecord{
+			Hostname: h.Full},
+		).Delete(&database.DnsRecord{}).Error; err != nil {
 			// Cloudflare removal success but can't remove DnsRecord from database
 			// TODO: Although rare, it's possible so need to add cleanup/rollback here too.
 			return err

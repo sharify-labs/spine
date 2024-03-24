@@ -23,13 +23,16 @@ func getUserFromSession(c echo.Context) models.AuthorizedUser {
 }
 
 func ResetToken(c echo.Context) error {
-	var token *security.ZephyrToken
+	var token *services.ZephyrToken
 	var err error
 
 	user := getUserFromSession(c)
 
-	if token, err = security.NewZephyrToken(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+	if token, err = services.NewZephyrToken(); err != nil {
+		// TODO: These are repeated in ProvideConfig() handler. Prob should make 1 func.
+		c.Logger().Error(err)
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
+		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
 	if err = token.AssignToUser(user.ID); err != nil {
