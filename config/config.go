@@ -8,9 +8,8 @@ import (
 )
 
 const (
-	UserHeader  string = "X-Upload-User"
-	HostHeader  string = "X-Upload-Host"
-	DefaultHost string = "sharify.me"
+	HeaderToken string = "X-Upload-Token"
+	HostDefault string = "sharify.me"
 )
 
 // Str reads in a string variable from environment.

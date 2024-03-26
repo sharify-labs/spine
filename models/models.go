@@ -22,7 +22,6 @@ type ShareXConfig struct {
 		MaxHours   string `json:"max_hours"`
 	} `json:"Parameters"`
 	Headers struct {
-		UploadUser  string `json:"X-Upload-User"`
 		UploadToken string `json:"X-Upload-Token"`
 	} `json:"Headers"`
 	Body         string `json:"Body"`

@@ -66,16 +66,26 @@ func (dr *DnsRecord) BeforeCreate(_ *gorm.DB) (err error) {
 	return
 }
 
+// Token represents a user's upload token.
+type Token struct {
+	gorm.Model
+	ID     string `gorm:"primaryKey"`
+	Hash   string `gorm:"unique;not null"`
+	UserID string `gorm:"unique;index"`
+	User   User
+}
+
 // User represents a person registered on our platform.
 type User struct {
 	gorm.Model
-	ID        string `gorm:"primaryKey"`
-	Email     string `gorm:"unique;not null"`
-	TokenHash string
-	PlanID    *uint // temp nullable
-	Plan      *Plan // temp nullable
-	Hosts     []Host
-	Uploads   []Upload
+	ID      string  `gorm:"primaryKey"`
+	Email   string  `gorm:"unique;not null"`
+	TokenID *string `gorm:"unique;index"`
+	Token   *Token  `gorm:"foreignKey:TokenID"`
+	PlanID  *uint   // temp nullable
+	Plan    *Plan   // temp nullable
+	Hosts   []Host
+	Uploads []Upload
 }
 
 func (u *User) BeforeCreate(_ *gorm.DB) (err error) {

@@ -27,17 +27,10 @@ func ResetToken(c echo.Context) error {
 	var err error
 
 	user := getUserFromSession(c)
-
-	if token, err = services.NewZephyrToken(); err != nil {
+	if token, err = services.NewZephyrToken(user.ID); err != nil {
 		// TODO: These are repeated in ProvideConfig() handler. Prob should make 1 func.
 		c.Logger().Error(err)
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
-		return echo.NewHTTPError(http.StatusInternalServerError)
-	}
-
-	if err = token.AssignToUser(user.ID); err != nil {
-		c.Logger().Error(err)
-		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to assign zephyr token to user: %v", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
@@ -126,8 +119,7 @@ func CreateHost(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		config.UserHeader: user.ID,
-		config.HostHeader: host.Full,
+		"success": true, // TODO: Replace this
 	})
 }
 
@@ -154,24 +146,18 @@ func ProvideConfig(c echo.Context) error {
 	if cfg == nil {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
-	token, err := services.NewZephyrToken()
+
+	user := getUserFromSession(c)
+	token, err := services.NewZephyrToken(user.ID)
 	if err != nil {
 		c.Logger().Error(err)
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
-		return echo.NewHTTPError(http.StatusInternalServerError)
-	}
-
-	user := getUserFromSession(c)
-	if err = token.AssignToUser(user.ID); err != nil {
-		c.Logger().Error(err)
-		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to assign zephyr token to user: %v", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 	cfg.Headers.UploadToken = token.Value
 	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
 	cfg.Parameters.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
 	cfg.Parameters.MaxHours = "{prompt:Enter number of hours until upload expires or press OK for permanent|}"
-	cfg.Headers.UploadUser = user.ID
 
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
@@ -180,7 +166,7 @@ func ProvideConfig(c echo.Context) error {
 	}
 	switch len(hostnames) {
 	case 0:
-		cfg.Parameters.Host = config.DefaultHost
+		cfg.Parameters.Host = config.HostDefault
 	case 1:
 		cfg.Parameters.Host = hostnames[0]
 	default:
