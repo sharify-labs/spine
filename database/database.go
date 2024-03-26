@@ -46,17 +46,18 @@ func connectDB() {
 	}
 
 	// Migrations
-	err = db.AutoMigrate(
-		&StorageKey{},
-		&User{},
-		&Plan{},
-		&Upload{},
-		&Host{},
-		&DnsRecord{},
-	)
-	if err != nil {
-		panic(err)
-	}
+	//err = db.AutoMigrate(
+	//	&StorageKey{},
+	//	&User{},
+	//	&Token{},
+	//	&Plan{},
+	//	&Upload{},
+	//	&Host{},
+	//	&DnsRecord{},
+	//)
+	//if err != nil {
+	//	panic(err)
+	//}
 }
 
 func connectCache() {
