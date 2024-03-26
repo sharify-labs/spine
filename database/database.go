@@ -65,7 +65,11 @@ func connectCache() {
 
 func getAllHosts(userID string) ([]*Host, error) {
 	var hosts []*Host
-	err := db.Clauses(clause.Locking{Strength: "SHARE"}).Where(&Host{UserID: userID}).Find(&hosts).Error
+	err := db.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthShare,
+	}).Where(&Host{
+		UserID: userID,
+	}).Find(&hosts).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
@@ -88,7 +92,9 @@ func GetAllHostnames(userID string) ([]string, error) {
 
 func GetUserUploads(userID string) ([]*Upload, error) {
 	var uploads []*Upload
-	err := db.Clauses(clause.Locking{Strength: "SHARE"}).Where(&Upload{UserID: userID}).Find(&uploads).Error
+	err := db.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthShare,
+	}).Where(&Upload{UserID: userID}).Find(&uploads).Error
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +104,9 @@ func GetUserUploads(userID string) ([]*Upload, error) {
 func GetOrCreateUser(email string) (*User, error) {
 	var user User
 	// TODO: Consider using Discord ID too because Discord emails can change.
-	err := db.Clauses(clause.Locking{Strength: "UPDATE"}).Where(&User{
+	err := db.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthUpdate,
+	}).Where(&User{
 		Email: strings.TrimSpace(strings.ToLower(email)),
 	}).FirstOrCreate(&user).Error
 	if err != nil {
