@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"github.com/gofiber/storage/memory/v2"
+	"github.com/markbates/goth"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/utils"
 	"gorm.io/driver/mysql"
@@ -102,13 +103,13 @@ func GetUserUploads(userID string) ([]*Upload, error) {
 	return uploads, nil
 }
 
-func GetOrCreateUser(email string) (*User, error) {
+func GetOrCreateUser(gothUser goth.User) (*User, error) {
 	var user User
-	// TODO: Consider using Discord ID too because Discord emails can change.
 	err := db.Clauses(clause.Locking{
 		Strength: clause.LockingStrengthUpdate,
 	}).Where(&User{
-		Email: strings.TrimSpace(strings.ToLower(email)),
+		Email:     strings.TrimSpace(strings.ToLower(gothUser.Email)),
+		DiscordID: &gothUser.UserID,
 	}).FirstOrCreate(&user).Error
 	if err != nil {
 		return nil, err

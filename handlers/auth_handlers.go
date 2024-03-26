@@ -29,7 +29,7 @@ func DiscordAuthCallback(c echo.Context) error {
 	}
 
 	// Ensure user is entered into Database
-	user, err := database.GetOrCreateUser(discordUser.Email)
+	user, err := database.GetOrCreateUser(discordUser)
 	if err != nil {
 		c.Logger().Errorf("failed to get/create user (database): %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
