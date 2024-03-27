@@ -45,20 +45,6 @@ func connectDB() {
 	if err != nil {
 		panic(err)
 	}
-
-	// Migrations
-	//err = db.AutoMigrate(
-	//	&StorageKey{},
-	//	&User{},
-	//	&Token{},
-	//	&Plan{},
-	//	&Upload{},
-	//	&Host{},
-	//	&DnsRecord{},
-	//)
-	//if err != nil {
-	//	panic(err)
-	//}
 }
 
 func connectCache() {
@@ -103,13 +89,16 @@ func GetUserUploads(userID string) ([]*Upload, error) {
 	return uploads, nil
 }
 
+// GetOrCreateUser Retrieves a user by Discord ID from the database. If not found, creates a new record.
+// Also assigns the provided email to the record, regardless of if the record is found.
 func GetOrCreateUser(gothUser goth.User) (*User, error) {
 	var user User
 	err := db.Clauses(clause.Locking{
 		Strength: clause.LockingStrengthUpdate,
-	}).Where(&User{
-		Email:     strings.TrimSpace(strings.ToLower(gothUser.Email)),
+	}).Where(User{
 		DiscordID: &gothUser.UserID,
+	}).Assign(User{
+		Email: strings.TrimSpace(strings.ToLower(gothUser.Email)),
 	}).FirstOrCreate(&user).Error
 	if err != nil {
 		return nil, err
