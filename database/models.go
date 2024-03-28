@@ -24,9 +24,24 @@ type Upload struct {
 	gorm.Model
 	ID         uint `gorm:"primaryKey;autoIncrement"`
 	Exp        *time.Time
-	StorageKey string `gorm:"unique;not null"`
-	UserID     string `gorm:"index"` // fk -> User.ID
-	User       User   // required for M-1 relationship (I think)
+	StorageKey string  `gorm:"unique;not null"`
+	Type       uint8   `gorm:"not null"` // internal type (file/image/paste/redirect)
+	Mime       *string // null for pastes/redirects
+	Size       int64   // file size / paste_content size / long_url size
+	Title      *string // filename / or user-provided title
+	Hostname   string  `gorm:"not null"` // ex: sharify.me
+	Secret     string  `gorm:"not null"` // ex: Rn1P8Zqz
+	UserID     string  `gorm:"index"`    // fk -> User.ID
+	User       User    // required for M-1 relationship (I think)
+}
+
+func (u *Upload) BeforeCreate(_ *gorm.DB) (err error) {
+	if u.Title != nil {
+		title := strings.TrimSpace(*u.Title)
+		u.Title = &title
+	}
+	u.Hostname = strings.ToLower(u.Hostname)
+	return
 }
 
 // Host represents a FQDN that a User can upload to.
