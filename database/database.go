@@ -36,7 +36,6 @@ func Cache() *memory.Storage {
 
 func connectDB() {
 	var err error
-
 	db, err = gorm.Open(mysql.New(mysql.Config{
 		DSN:           config.Str("MYSQL_DSN"),
 		ServerVersion: "MariaDB",
@@ -72,7 +71,11 @@ func GetAllHostnames(userID string) ([]string, error) {
 	}
 	var names []string
 	for _, host := range hosts {
-		names = append(names, utils.CompileHostname(host.Sub, host.Root))
+		if host.Sub != "" {
+			names = append(names, host.Sub+"."+host.Root)
+		} else {
+			names = append(names, host.Root)
+		}
 	}
 	return names, nil
 }
@@ -81,7 +84,9 @@ func GetUserUploads(userID string) ([]*Upload, error) {
 	var uploads []*Upload
 	err := db.Clauses(clause.Locking{
 		Strength: clause.LockingStrengthShare,
-	}).Where(&Upload{UserID: userID}).Find(&uploads).Error
+	}).Where(&Upload{
+		UserID: userID,
+	}).Find(&uploads).Error
 	if err != nil {
 		return nil, err
 	}
