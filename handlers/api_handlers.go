@@ -11,7 +11,7 @@ import (
 	"github.com/sharify-labs/spine/database"
 	"github.com/sharify-labs/spine/models"
 	"github.com/sharify-labs/spine/services"
-	"github.com/sharify-labs/spine/utils"
+	"github.com/sharify-labs/spine/validators"
 	"io"
 	"net/http"
 	"strings"
@@ -101,11 +101,11 @@ func ListHosts(c echo.Context) error {
 // CreateHost creates new hosts for a user.
 // Root domain must be registered first. This can be checked with ListDomainsHandler.
 func CreateHost(c echo.Context) error {
-	sub := utils.SanitizeSubdomain(c.FormValue("subDomain"))
-	hostname := utils.CompileHostname(sub, c.FormValue("rootDomain")) // TODO: Make sure rootDomain came from the list of available domains and is not being injected some other way.
+	sub := validators.SanitizeSubdomain(c.FormValue("subDomain"))
+	root := c.FormValue("rootDomain") // TODO: Make sure rootDomain came from the list of available domains and is not being injected some other way.
 	user := getUserFromSession(c)
 
-	host := services.NewHostDTO(hostname, user.ID)
+	host := services.NewHostFromParts(sub, root, user.ID)
 	if host == nil {
 		// Hostname does not meet format requirements. Should prob be validated on frontend too.
 		return echo.NewHTTPError(http.StatusBadRequest, "Hostname format must be sub.root.tld")
@@ -127,7 +127,7 @@ func DeleteHost(c echo.Context) error {
 	hostname := c.Param("name")
 	user := getUserFromSession(c)
 
-	if host := services.NewHostDTO(hostname, user.ID); host != nil {
+	if host := services.NewHostFromFull(hostname, user.ID); host != nil {
 		if err := host.Delete(); err != nil {
 			c.Logger().Error(err)
 			clients.Sentry.CaptureErr(c, fmt.Errorf("error deleting host: %v", err))

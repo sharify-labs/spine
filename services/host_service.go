@@ -10,29 +10,44 @@ import (
 	"strings"
 )
 
-// HostDTO helps parse a hostname string into a usable "object".
-type HostDTO struct {
+// Host helps parse a hostname string into a usable "object".
+type Host struct {
 	Full   string
 	Sub    string
 	Root   string
 	UserID string
 }
 
-func NewHostDTO(hostname string, userID string) *HostDTO {
-	hostname = strings.ToLower(strings.TrimSpace(hostname))
+// JoinHostname combines a sub and root domain into a single hostname string.
+func JoinHostname(sub string, root string) string {
+	if sub != "" {
+		return sub + "." + root
+	}
+	return root
+}
+
+// NewHostFromFull takes in a full hostname and userID and returns a Host object.
+// - Assumes the hostname is pre-validated and sanitized.
+// - We only support 1st-level subdomains. We do not need to consider subs with multiple periods.
+// - We only support TLDs with 1 period (ex: .co.uk is not supported)
+func NewHostFromFull(hostname string, userID string) *Host {
 	parts := strings.Split(hostname, ".")
 	var sub, root string
 	switch {
+	// sharify.me
 	case len(parts) == 2:
 		sub = ""
 		root = hostname
+	// i.sharify.me
 	case len(parts) == 3:
 		sub = parts[0]
 		root = parts[1] + "." + parts[2]
+	// invalid (foo.bar.sharify.me) or (sharify)
 	default:
-		return nil // not long enough or more than 1 level to subdomain
+		sub = ""
+		root = ""
 	}
-	return &HostDTO{
+	return &Host{
 		Full:   hostname,
 		Sub:    sub,
 		Root:   root,
@@ -40,18 +55,31 @@ func NewHostDTO(hostname string, userID string) *HostDTO {
 	}
 }
 
-func (h *HostDTO) dnsRecord() *database.DnsRecord {
+// NewHostFromParts takes in a hostname and userID and returns a Host object.
+// Note: Assumes the sub and root are pre-validated and sanitized.
+func NewHostFromParts(sub string, root string, userID string) *Host {
+	return &Host{
+		Full:   JoinHostname(sub, root),
+		Sub:    sub,
+		Root:   root,
+		UserID: userID,
+	}
+}
+
+func (h *Host) dnsRecord() *database.DnsRecord {
 	var record database.DnsRecord
-	err := database.DB().Clauses(clause.Locking{Strength: "SHARE"}).Where(
-		&database.DnsRecord{Hostname: h.Full},
-	).First(&record).Error
+	err := database.DB().Clauses(clause.Locking{
+		Strength: clause.LockingStrengthShare,
+	}).Where(&database.DnsRecord{
+		Hostname: h.Full,
+	}).First(&record).Error
 	if err != nil {
 		return nil
 	}
 	return &record
 }
 
-func (h *HostDTO) sendToCF() error {
+func (h *Host) sendToCF() error {
 	// Create Cloudflare DNS Record
 	record, err := clients.Cloudflare.CreateCNAME(h.UserID, h.Sub, h.Root)
 	if err != nil {
@@ -79,14 +107,13 @@ func (h *HostDTO) sendToCF() error {
 	return nil
 }
 
-func (h *HostDTO) sendToDB() error {
+func (h *Host) sendToDB() error {
 	record := h.dnsRecord()
 	if record != nil {
 		// Lock dns_records table from getting updated while creating host
-		// to ensure host is not getting created with invalid dns_record.ID
-		// TODO: Unsure if this is correct but makes sense to me.
+		// to ensure host is not getting created while dns_record is getting deleted elsewhere.
 		return database.DB().Clauses(clause.Locking{
-			Strength: "SHARE",
+			Strength: clause.LockingStrengthShare,
 			Table:    clause.Table{Name: "dns_records"},
 		}).Create(&database.Host{
 			DnsRecordID: record.ID,
@@ -98,7 +125,7 @@ func (h *HostDTO) sendToDB() error {
 	return fmt.Errorf("missing cloudflare recordID for %s", h.Full)
 }
 
-func (h *HostDTO) removeFromCF() error {
+func (h *Host) removeFromCF() error {
 	// Get dns record from database
 	if record := h.dnsRecord(); record != nil {
 		if err := clients.Cloudflare.RemoveCNAME(record.ZoneID, record.ID); err != nil {
@@ -108,11 +135,11 @@ func (h *HostDTO) removeFromCF() error {
 		// -> Remove DnsRecord entry from Database too
 		// Lock dns_records table to prevent multiple txs from trying to delete the same record.
 		if err := database.DB().Clauses(clause.Locking{
-			Strength: "UPDATE",
+			Strength: clause.LockingStrengthUpdate,
 			Table:    clause.Table{Name: clause.CurrentTable},
 		}).Where(&database.DnsRecord{
-			Hostname: h.Full},
-		).Delete(&database.DnsRecord{}).Error; err != nil {
+			Hostname: h.Full,
+		}).Delete(&database.DnsRecord{}).Error; err != nil {
 			// Cloudflare removal success but can't remove DnsRecord from database
 			// TODO: Although rare, it's possible so need to add cleanup/rollback here too.
 			return err
@@ -122,10 +149,10 @@ func (h *HostDTO) removeFromCF() error {
 	}
 	return fmt.Errorf("failed to delete %s from cloudflare: database is missing dns record", h.Full)
 }
-func (h *HostDTO) removeFromDB() error {
+func (h *Host) removeFromDB() error {
 	// Lock hosts table to prevent multiple txs from trying to delete the same host.
 	return database.DB().Clauses(clause.Locking{
-		Strength: "UPDATE",
+		Strength: clause.LockingStrengthUpdate,
 		Table:    clause.Table{Name: clause.CurrentTable},
 	}).Where(&database.Host{
 		Sub:    h.Sub,
@@ -135,7 +162,7 @@ func (h *HostDTO) removeFromDB() error {
 }
 
 // Register writes the host to the database and creates a Cloudflare CNAME entry.
-func (h *HostDTO) Register() error {
+func (h *Host) Register() error {
 	dnsRecord := h.dnsRecord()
 	// If host has subdomain -> might need to create DNS entry
 	if h.Sub != "" {
@@ -156,14 +183,14 @@ func (h *HostDTO) Register() error {
 	return nil
 }
 
-func (h *HostDTO) Delete() error {
+func (h *Host) Delete() error {
 	// Root-only hostnames don't have CNAME records -> Skip Cloudflare.
 	// Subdomain hostnames should only be removed from Cloudflare if only 1 entry exists in Hosts DB table
 	var count int64
 
 	// Lock hosts table from getting updated while counting records to prevent race condition (I think?)
 	err := database.DB().Clauses(clause.Locking{
-		Strength: "SHARE",
+		Strength: clause.LockingStrengthShare,
 		Table:    clause.Table{Name: "hosts"},
 	}).Model(&database.Host{}).Where(&database.Host{
 		Sub:  h.Sub,

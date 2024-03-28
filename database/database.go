@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/markbates/goth"
 	"github.com/sharify-labs/spine/config"
-	"github.com/sharify-labs/spine/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
