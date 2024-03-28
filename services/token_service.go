@@ -47,7 +47,7 @@ func NewZephyrToken(userID string) (*ZephyrToken, error) {
 	var err error
 	var tokenID []byte
 	if user.Token != nil {
-		tokenID, err = base64.URLEncoding.DecodeString(user.Token.ID)
+		tokenID, err = base64.RawURLEncoding.DecodeString(user.Token.ID)
 	} else {
 		tokenID, err = GenerateRandomBytes(8)
 		if err != nil {
@@ -66,13 +66,14 @@ func NewZephyrToken(userID string) (*ZephyrToken, error) {
 	}
 
 	// Store in database
+	user.Token = &database.Token{
+		ID:     base64.RawURLEncoding.EncodeToString(tokenID),
+		Hash:   base64.RawURLEncoding.EncodeToString(hash),
+		UserID: userID,
+	}
 	err = database.DB().Clauses(clause.Locking{
 		Strength: clause.LockingStrengthUpdate,
-	}).Save(&database.Token{
-		ID:     base64.URLEncoding.EncodeToString(tokenID),
-		Hash:   base64.URLEncoding.EncodeToString(hash),
-		UserID: userID,
-	}).Error
+	}).Save(&user).Error
 	if err != nil {
 		return nil, err
 	}
