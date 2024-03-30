@@ -5,11 +5,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
 	HeaderToken string = "X-Upload-Token"
 	HostDefault string = "sharify.me"
+)
+const (
+	SessionMaxAge = time.Hour * 24 * 7
 )
 
 // Str reads in a string variable from environment.

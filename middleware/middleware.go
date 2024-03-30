@@ -22,6 +22,7 @@ func Setup(e *echo.Echo, assets embed.FS) {
 		config.DecodedB64("SESSION_AUTH_KEY_64", 64),
 		config.DecodedB64("SESSION_ENC_KEY_32", 32),
 	)
+	sessStore.MaxAge(int(config.SessionMaxAge.Seconds()))
 	gothic.Store = sessStore
 	gob.Register(models.AuthorizedUser{})
 
