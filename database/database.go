@@ -5,9 +5,13 @@ import (
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/markbates/goth"
 	"github.com/sharify-labs/spine/config"
-	"gorm.io/driver/mysql"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
+	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -36,10 +40,20 @@ func Cache() *memory.Storage {
 
 func connectDB() {
 	var err error
-	db, err = gorm.Open(mysql.New(mysql.Config{
-		DSN:           config.Str("MYSQL_DSN"),
-		ServerVersion: "MariaDB",
-	}), &gorm.Config{TranslateError: true})
+	db, err = gorm.Open(sqlite.New(sqlite.Config{
+		DSN:        config.Str("TURSO_DSN"),
+		DriverName: "libsql",
+	}), &gorm.Config{
+		TranslateError: true,
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+			logger.Config{
+				SlowThreshold: time.Second,
+				LogLevel:      logger.LogLevel(config.Int("LOG_LEVEL")),
+				Colorful:      true,
+			},
+		),
+	})
 	if err != nil {
 		panic(err)
 	}
