@@ -5,14 +5,41 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/database"
 	"gorm.io/gorm/clause"
+	"time"
 )
 
-const tokenPrefix string = "sfy"
+const zephyrTokenPrefix string = "sfy"
 
 type ZephyrToken struct {
 	Value string
+}
+
+// GenerateJWT creates a new JWT for the user.
+// This token is stored in the user's Cookies so that it can be used
+// to authenticate with Zephyr when uploading directly from the web panel.
+func GenerateJWT(userID string) (string, error) {
+	keyPEM, err := base64.StdEncoding.DecodeString(config.Str("JWT_PRIVATE_KEY"))
+	if err != nil {
+		return "", err
+	}
+	privateKey, err := jwt.ParseECPrivateKeyFromPEM(keyPEM)
+	if err != nil {
+		return "", err
+	}
+	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(config.SessionMaxAge)),
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		Subject:   userID,
+		Issuer:    "spine",
+	}).SignedString(privateKey)
+	if err != nil {
+		return "", err
+	}
+	return tokenStr, err
 }
 
 // NewZephyrToken generates a new upload token and stores it in the database.
@@ -27,7 +54,7 @@ type ZephyrToken struct {
 //
 // Notes:
 //   - Token ID and Key are hex-encoded for user
-//   - Token ID and Key Hash are base64-URLEncoded in database.
+//   - Token ID and Key Hash are base64-RawURLEncoded in database.
 //   - Token ID is generated the first time a user receives a token.
 //   - When tokens get refreshed, the ID stays the same. Only the 'key' changes.
 //   - The key is hashed and stored. The id acts as a 'username'.
@@ -81,7 +108,7 @@ func NewZephyrToken(userID string) (*ZephyrToken, error) {
 	// Combine prefix, id, and key, seperated by underscores and return to user.
 	// Example: sfy_3c9c0fe69b72b2c1_734c5c796877fb00f2fc31d024c62f12302367f08338dc35113b42eef7be7fd3
 	return &ZephyrToken{
-		Value: tokenPrefix + "_" + hex.EncodeToString(tokenID) + "_" + hex.EncodeToString(key),
+		Value: zephyrTokenPrefix + "_" + hex.EncodeToString(tokenID) + "_" + hex.EncodeToString(key),
 	}, nil
 }
 

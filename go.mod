@@ -7,6 +7,7 @@ require (
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/goccy/go-json v0.10.2
 	github.com/gofiber/storage/memory/v2 v2.0.1
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.2.2
 	github.com/joho/godotenv v1.5.1

@@ -7,6 +7,9 @@ type AuthorizedUser struct {
 		Username string
 		Email    string
 	}
+	// Key is used for uploading to Zephyr directly from panel.
+	// Different from user's API Token. Key is recreated when Cookies are cleared.
+	Key string
 }
 
 // ShareXConfig represents the configuration file for ShareX.
