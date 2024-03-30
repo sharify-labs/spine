@@ -12,8 +12,6 @@ go install github.com/cosmtrek/air@latest
 ```
 
 ## To-Do
-- Consider if we should allow people to have multiple-levels to subdomains (ex: my.very.funny.domain.com)
-  - Doing so would have implications regarding [SSL certs](https://developers.cloudflare.com/ssl/edge-certificates/advanced-certificate-manager)
 - Implement better error messages in handlers so user knows what's wrong (when possible).
 - Popup for deleting Hosts in Dashboard that clarifies what it means (like GitHub does with archiving/deleting repos)
   - Images will NOT be deleted
