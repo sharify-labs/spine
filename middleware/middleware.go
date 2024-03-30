@@ -57,7 +57,8 @@ func RequireSession(next echo.HandlerFunc) echo.HandlerFunc {
 			c.Logger().Errorf("unable to get session: %v", err)
 			return c.Redirect(http.StatusFound, "/login")
 		}
-		if sess.Values["auth_user"] != nil {
+		if user, ok := sess.Values["auth_user"].(models.AuthorizedUser); ok {
+			c.Set("user", user)
 			return next(c) // Session is valid, proceed with the request.
 		}
 		return c.Redirect(http.StatusFound, "/login")

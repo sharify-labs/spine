@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	goccy "github.com/goccy/go-json"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/config"
@@ -17,16 +16,11 @@ import (
 	"strings"
 )
 
-func getUserFromSession(c echo.Context) models.AuthorizedUser {
-	sess, _ := session.Get("session", c)
-	return sess.Values["auth_user"].(models.AuthorizedUser)
-}
-
 func ResetToken(c echo.Context) error {
 	var token *services.ZephyrToken
 	var err error
 
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 	if token, err = services.NewZephyrToken(user.ID); err != nil {
 		// TODO: These are repeated in ProvideConfig() handler. Prob should make 1 func.
 		c.Logger().Error(err)
@@ -43,7 +37,7 @@ func ResetToken(c echo.Context) error {
 }
 
 func DisplayGallery(c echo.Context) error {
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 	uploads, err := database.GetUserUploads(user.ID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
@@ -90,7 +84,7 @@ func ListAvailableDomains(c echo.Context) error {
 
 // ListHosts returns a JSON array of all hosts registered by a given user.
 func ListHosts(c echo.Context) error {
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -103,7 +97,7 @@ func ListHosts(c echo.Context) error {
 func CreateHost(c echo.Context) error {
 	sub := validators.SanitizeSubdomain(c.FormValue("subDomain"))
 	root := c.FormValue("rootDomain") // TODO: Make sure rootDomain came from the list of available domains and is not being injected some other way.
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 
 	host := services.NewHostFromParts(sub, root, user.ID)
 	if host == nil {
@@ -125,7 +119,7 @@ func CreateHost(c echo.Context) error {
 
 func DeleteHost(c echo.Context) error {
 	hostname := c.Param("name")
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 
 	if host := services.NewHostFromFull(hostname, user.ID); host != nil {
 		if err := host.Delete(); err != nil {
@@ -147,7 +141,7 @@ func ProvideConfig(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
 
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 	token, err := services.NewZephyrToken(user.ID)
 	if err != nil {
 		c.Logger().Error(err)

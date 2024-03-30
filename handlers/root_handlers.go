@@ -4,11 +4,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/database"
+	"github.com/sharify-labs/spine/models"
 	"net/http"
 )
 
 func Root(c echo.Context) error {
-	return c.Redirect(http.StatusFound, "/login")
+	return c.Redirect(http.StatusFound, "/dashboard")
 }
 
 func Login(c echo.Context) error {
@@ -32,7 +33,7 @@ func DisplayDashboard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	user := getUserFromSession(c)
+	user := c.Get("user").(models.AuthorizedUser)
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
 		c.Logger().Error(err)
