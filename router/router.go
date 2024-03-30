@@ -18,15 +18,15 @@ import (
 //
 // Protected:
 // GET     /dashboard       	-> handlers.DisplayDashboard
-// GET     /api/reset-token 	-> handlers.ResetToken
-// GET     /api/gallery     	-> handlers.DisplayGallery
-// GET	   /api/config/:type    -> handlers.ProvideConfig  // :type must be files/pastes/redirects
+// GET     /api/v1/reset-token 	-> handlers.ResetToken
+// GET     /api/v1/gallery     	-> handlers.DisplayGallery
+// GET	   /api/v1/config/:type    -> handlers.ProvideConfig  // :type must be files/pastes/redirects
 //
-// GET	   /api/domains      -> handlers.ListAvailableDomains
+// GET	   /api/v1/domains      -> handlers.ListAvailableDomains
 //
-// GET     /api/hosts        -> handlers.ListHosts
-// POST    /api/hosts        -> handlers.CreateHost
-// DELETE  /api/hosts/:name  -> handlers.DeleteHost
+// GET     /api/v1/hosts        -> handlers.ListHosts
+// POST    /api/v1/hosts        -> handlers.CreateHost
+// DELETE  /api/v1/hosts/:name  -> handlers.DeleteHost
 func Setup(e *echo.Echo) {
 	// Root routes
 	e.GET("", h.Root)
@@ -35,31 +35,23 @@ func Setup(e *echo.Echo) {
 	// Auth routes
 	auth := e.Group("/auth")
 	{
-		discord := auth.Group("/discord")
-		{
-			discord.GET("", h.DiscordAuth)
-			discord.GET("/callback", h.DiscordAuthCallback)
-		}
+		auth.GET("/discord", h.DiscordAuth)
+		auth.GET("/discord/callback", h.DiscordAuthCallback)
 	}
 
 	// Protected routes
 	e.GET("/dashboard", h.DisplayDashboard, mw.RequireSession)
 	api := e.Group("/api", mw.RequireSession)
 	{
-		api.GET("/reset-token", h.ResetToken)
-		//api.GET("/gallery", h.DisplayGallery)
-		api.GET("/config/:type", h.ProvideConfig)
-
-		domains := api.Group("/domains")
+		v1 := api.Group("/v1")
 		{
-			domains.GET("", h.ListAvailableDomains)
-		}
+			v1.GET("/reset-token", h.ResetToken)
+			v1.GET("/config/:type", h.ProvideConfig) // TODO: Make this 1 endpoint that downloads a zip with all configs
+			v1.GET("/domains", h.ListAvailableDomains)
 
-		hosts := api.Group("/hosts")
-		{
-			hosts.GET("", h.ListHosts)
-			hosts.POST("", h.CreateHost)
-			hosts.DELETE("/:name", h.DeleteHost)
+			v1.GET("/hosts", h.ListHosts)
+			v1.POST("/hosts", h.CreateHost)
+			v1.DELETE("/hosts/:name", h.DeleteHost)
 		}
 	}
 }

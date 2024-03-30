@@ -12,7 +12,7 @@
 <body>
 <h1>Welcome to the dashboard, {{.Username}}!</h1>
 
-<form id="reset-token-form" hx-get="/api/reset-token" hx-target="#reset-token-response" hx-swap="outerHTML">
+<form id="reset-token-form" hx-get="/api/v1/reset-token" hx-target="#reset-token-response" hx-swap="outerHTML">
     <button class="button" type="submit">Generate Key</button>
 </form>
 <div id="reset-token-response"></div>
@@ -20,7 +20,7 @@
 <!--<button id="galleryButton">Gallery</button>-->
 <!--<div id="gallery"></div>-->
 
-<form id="create-host-form" hx-post="/api/hosts" hx-target="#create-host-response" hx-swap="outerHTML">
+<form id="create-host-form" hx-post="/api/v1/hosts" hx-target="#create-host-response" hx-swap="outerHTML">
     <div style="display: flex; align-items: center;">
         <!-- Input Field -->
         <input type="text" id="subDomain" name="subDomain" placeholder="Subdomain">
@@ -50,7 +50,7 @@
     <div>
         <span>{{ .Name }}</span>
         <button class="button delete"
-                hx-delete="/api/hosts/{{ .Name }}"
+                hx-delete="/api/v1/hosts/{{ .Name }}"
                 hx-confirm="Are you sure you want do delete this host?"
                 hx-target="#hosts-list"
                 hx-swap="outerHTML">Delete
@@ -77,13 +77,13 @@
 <!--    <div id="delete-host-response"></div>-->
 
 
-<!--    <form action="/api/reset-token" method="GET"><button type="submit">Generate Key</button></form>-->
+<!--    <form action="/api/v1/reset-token" method="GET"><button type="submit">Generate Key</button></form>-->
 <!--    <button id="galleryButton">Gallery</button>-->
 <!--    <div id="gallery"></div>-->
 
 <!--    <script>-->
 <!--        document.getElementById("galleryButton").addEventListener("click", function() {-->
-<!--            fetch("/api/gallery", {-->
+<!--            fetch("/api/v1/gallery", {-->
 <!--                method: "GET",-->
 <!--            }).then(response => response.json())-->
 <!--                .then(data => {-->
