@@ -49,16 +49,17 @@ func Setup(e *echo.Echo, assets embed.FS) {
 	)
 }
 
-// IsAuthenticated is a middleware that checks if the user is logged in.
-func IsAuthenticated(next echo.HandlerFunc) echo.HandlerFunc {
+// RequireSession is a middleware that checks if the user is logged in.
+func RequireSession(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sess, err := session.Get("session", c)
-		if err != nil || sess.Values["auth_user"] == nil {
-			// If the user is not authenticated, redirect.
+		if err != nil {
+			c.Logger().Errorf("unable to get session: %v", err)
 			return c.Redirect(http.StatusFound, "/login")
 		}
-
-		// If the session exists and is valid, proceed with the request.
-		return next(c)
+		if sess.Values["auth_user"] != nil {
+			return next(c) // Session is valid, proceed with the request.
+		}
+		return c.Redirect(http.StatusFound, "/login")
 	}
 }
