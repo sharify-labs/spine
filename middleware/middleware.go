@@ -28,6 +28,7 @@ func Setup(e *echo.Echo, assets embed.FS) {
 
 	// Init middleware
 	e.Use(
+		mw.Secure(),
 		mw.Recover(),
 		mw.BodyLimit("100M"),
 		mw.LoggerWithConfig(mw.LoggerConfig{
