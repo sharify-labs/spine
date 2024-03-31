@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"fmt"
 	goccy "github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
@@ -11,10 +10,15 @@ import (
 	"github.com/sharify-labs/spine/models"
 	"github.com/sharify-labs/spine/services"
 	"github.com/sharify-labs/spine/validators"
-	"io"
 	"net/http"
 	"strings"
 )
+
+func ZephyrProxy(c echo.Context) error {
+	user := c.Get("user").(models.AuthorizedUser)
+	c.Logger().Infof("ZephyrProxy user has token: %s", user.ZephyrJWT)
+	return clients.HTTP.ForwardToZephyr(c, user.ZephyrJWT)
+}
 
 func ResetToken(c echo.Context) error {
 	var token *services.ZephyrToken
@@ -34,41 +38,6 @@ func ResetToken(c echo.Context) error {
 		<code id="token">`+token.Value+`</code></pre>
 		<button onclick="copyContent('token')">Copy Token</button>`,
 	)
-}
-
-func DisplayGallery(c echo.Context) error {
-	user := c.Get("user").(models.AuthorizedUser)
-	uploads, err := database.GetUserUploads(user.ID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
-	var storeKeys []string
-	for _, u := range uploads {
-		storeKeys = append(storeKeys, u.StorageKey)
-	}
-
-	rqBody, err := goccy.Marshal(storeKeys)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-	// TODO: dont read API Key from env every time
-	url := "https://ejl.me/api/uploads/" + user.ID + "?key=" + config.Str("CANVAS_API_KEY")
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(rqBody))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-	var base64Images []string
-	if err = goccy.Unmarshal(respBody, &base64Images); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-
-	return c.JSON(http.StatusOK, base64Images)
 }
 
 // ListAvailableDomains returns a JSON array of all available root domain names.

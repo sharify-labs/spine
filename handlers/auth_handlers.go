@@ -37,15 +37,15 @@ func DiscordAuthCallback(c echo.Context) error {
 	}
 
 	// Generate temp key (used for uploading to Zephyr directly from panel)
-	key, err := services.GenerateJWT(user.ID)
+	zephyrJWT, err := services.GenerateJWT(user.ID)
 	if err != nil {
 		c.Logger().Errorf("failed to generate JWT: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
-	c.Logger().Debugf("Generated new JWT: %s", key)
+	c.Logger().Debugf("Generated new JWT: %s", zephyrJWT)
 	authUser := models.AuthorizedUser{
-		ID:  user.ID,
-		Key: key,
+		ID:        user.ID,
+		ZephyrJWT: zephyrJWT,
 	}
 	authUser.Discord.Username = discordUser.Name
 	authUser.Discord.Email = discordUser.Email

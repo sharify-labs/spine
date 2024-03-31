@@ -19,6 +19,11 @@ keys:
 	@echo "JWT_PRIVATE_KEY='$$(cat ec-private.pem | base64 | tr -d '\n')'" >> .env
 	@echo "JWT_PUBLIC_KEY='$$(cat ec-public.pem | base64 | tr -d '\n')'" >> .env
 	@rm -f ec-private.pem ec-public.pem
+	@# Spine -> Zephyr Admin Key
+	@openssl rand -out admin-key.bin 64
+	@echo "ZEPHYR_ADMIN_KEY='$$(openssl base64 -in admin-key.bin | tr -d '\n')'" >> .env
+	@echo "ADMIN_KEY_HASH='$$(openssl dgst -sha512 admin-key.bin | cut -d ' ' -f 2)'" >> .env
+	@rm -f admin-key.bin
 	@echo "Keys generated and saved to .env"
 
 run: build

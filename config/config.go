@@ -9,8 +9,11 @@ import (
 )
 
 const (
-	HeaderToken string = "X-Upload-Token"
-	HostDefault string = "sharify.me"
+	HeaderJWTAuth  string = "Authorization" // Used for Zephyr Auth
+	HeaderSpineKey string = "X-Spine-Key"   // Used to verify HeaderJWTAuth is coming from spine (ZEPHYR_ADMIN_KEY)
+	HostDefault    string = "sharify.me"
+	ZephyrURL      string = "xericl.dev"
+	UserAgent      string = "sharify-labs/spine"
 )
 const (
 	SessionMaxAge = time.Hour * 24 * 7

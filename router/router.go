@@ -9,24 +9,31 @@ import (
 // Setup initializes all routes:
 //
 // Root:
-// GET     /       -> handlers.Root
-// GET     /login  -> handlers.Login
+//
+//	GET     /       -> handlers.Root
+//	GET     /login  -> handlers.Login
 //
 // Auth:
 // GET     /auth/discord           -> handlers.DiscordAuth
 // GET     /auth/discord/callback  -> handlers.DiscordAuthCallback
 //
 // Protected:
-// GET     /dashboard       	-> handlers.DisplayDashboard
-// GET     /api/v1/reset-token 	-> handlers.ResetToken
-// GET     /api/v1/gallery     	-> handlers.DisplayGallery
-// GET	   /api/v1/config/:type    -> handlers.ProvideConfig  // :type must be files/pastes/redirects
+// GET     /dashboard       		-> handlers.DisplayDashboard
+// GET     /api/v1/reset-token 		-> handlers.ResetToken
+// GET	   /api/v1/config/:type 	-> handlers.ProvideConfig  // :type must be files/pastes/redirects
+// GET	   /api/v1/domains      	-> handlers.ListAvailableDomains
+// GET     /api/v1/hosts        	-> handlers.ListHosts
+// POST    /api/v1/hosts        	-> handlers.CreateHost
+// DELETE  /api/v1/hosts/:name  	-> handlers.DeleteHost
 //
-// GET	   /api/v1/domains      -> handlers.ListAvailableDomains
-//
-// GET     /api/v1/hosts        -> handlers.ListHosts
-// POST    /api/v1/hosts        -> handlers.CreateHost
-// DELETE  /api/v1/hosts/:name  -> handlers.DeleteHost
+// Zephyr Routes:
+// GET /api/v1/uploads
+// POST /api/v1/uploads
+// DELETE /api/v1/uploads
+// Note:
+//   - These routes forward the body and query parameters directly to Zephyr.
+//   - All paths must exactly match the paths in Zephyr (see clients.HTTP ForwardToZephyr method)
+//   - They are protected just like API routes.
 func Setup(e *echo.Echo) {
 	// Root routes
 	e.GET("", h.Root)
@@ -52,6 +59,10 @@ func Setup(e *echo.Echo) {
 			v1.GET("/hosts", h.ListHosts)
 			v1.POST("/hosts", h.CreateHost)
 			v1.DELETE("/hosts/:name", h.DeleteHost)
+
+			v1.GET("/uploads", h.ZephyrProxy)
+			v1.POST("/uploads", h.ZephyrProxy)
+			v1.DELETE("/uploads", h.ZephyrProxy)
 		}
 	}
 }
