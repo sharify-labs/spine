@@ -119,8 +119,8 @@ func ProvideConfig(c echo.Context) error {
 	}
 	cfg.Headers.UploadToken = token.Value
 	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
-	cfg.Parameters.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
-	cfg.Parameters.MaxHours = "{prompt:Enter number of hours until upload expires or press OK for permanent|}"
+	cfg.Arguments.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
+	cfg.Arguments.MaxHours = "{prompt:Enter number of hours until upload expires or skip for permanent|}"
 
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
@@ -129,13 +129,13 @@ func ProvideConfig(c echo.Context) error {
 	}
 	switch len(hostnames) {
 	case 0:
-		cfg.Parameters.Host = config.HostDefault
+		cfg.Arguments.Host = config.HostDefault
 	case 1:
-		cfg.Parameters.Host = hostnames[0]
+		cfg.Arguments.Host = hostnames[0]
 	default:
 		// TODO: Make it optional for users to select "randomize" from the menu when generating config
 		// 		 In those cases, replace 'select' with 'random'
-		cfg.Parameters.Host = fmt.Sprintf("{select:%s}", strings.Join(hostnames, "|"))
+		cfg.Arguments.Host = fmt.Sprintf("{select:%s}", strings.Join(hostnames, "|"))
 	}
 
 	userConfigContent, err := goccy.MarshalIndent(cfg, "", "\t")

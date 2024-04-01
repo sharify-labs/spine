@@ -19,15 +19,15 @@ type ShareXConfig struct {
 	DestinationType string `json:"DestinationType"`
 	RequestMethod   string `json:"RequestMethod"`
 	RequestURL      string `json:"RequestURL"`
-	Parameters      struct {
-		Host       string `json:"host"`
-		CustomPath string `json:"custom_path"`
-		MaxHours   string `json:"max_hours"`
-	} `json:"Parameters"`
-	Headers struct {
+	Headers         struct {
 		UploadToken string `json:"X-Upload-Token"`
 	} `json:"Headers"`
-	Body         string `json:"Body"`
+	Body      string `json:"Body"`
+	Arguments struct {
+		Host       string `json:"host"`
+		CustomPath string `json:"path"`
+		MaxHours   string `json:"expiration"`
+	} `json:"Arguments"`
 	FileFormName string `json:"FileFormName"`
 	URL          string `json:"URL"`
 	ErrorMessage string `json:"ErrorMessage"`
