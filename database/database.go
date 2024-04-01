@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// db MySQL/MariaDB gorm connector
+// db SQL gorm connector
 // cache local memory storage connector
 var (
 	db    *gorm.DB
