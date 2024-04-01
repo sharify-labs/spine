@@ -24,9 +24,9 @@ type ShareXConfig struct {
 	} `json:"Headers"`
 	Body      string `json:"Body"`
 	Arguments struct {
-		Host       string `json:"host"`
-		CustomPath string `json:"path"`
-		MaxHours   string `json:"expiration"`
+		Host     string `json:"host"`
+		Secret   string `json:"secret"`
+		Duration string `json:"duration"`
 	} `json:"Arguments"`
 	FileFormName string `json:"FileFormName"`
 	URL          string `json:"URL"`
@@ -36,24 +36,20 @@ type ShareXConfig struct {
 type ShareXConfigDetails struct {
 	DestinationType string
 	FileFormName    string
-	UploadPath      string
 }
 
 var mapStrToShareXConfigDetails = map[string]ShareXConfigDetails{
 	"files": {
 		"FileUploader, ImageUploader",
 		"file",
-		"files",
 	},
 	"pastes": {
 		"TextUploader",
 		"paste_content",
-		"pastes",
 	},
 	"redirects": {
 		"URLShortener",
 		"long_url",
-		"redirects",
 	},
 }
 
@@ -67,7 +63,7 @@ func NewShareXConfig(t string) *ShareXConfig {
 			Name:            "Sharify",
 			DestinationType: uType.DestinationType,
 			RequestMethod:   "POST",
-			RequestURL:      "https://xericl.dev/api/v1/" + t,
+			RequestURL:      "https://xericl.dev/api/v1/uploads",
 			Body:            "MultipartFormData",
 			FileFormName:    uType.FileFormName,
 			URL:             "{json:url}",

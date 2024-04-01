@@ -119,8 +119,8 @@ func ProvideConfig(c echo.Context) error {
 	}
 	cfg.Headers.UploadToken = token.Value
 	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
-	cfg.Arguments.CustomPath = "{prompt:Enter custom path or press OK to skip|}"
-	cfg.Arguments.MaxHours = "{prompt:Enter number of hours until upload expires or skip for permanent|}"
+	cfg.Arguments.Secret = "{prompt:Enter custom secret or press OK to skip|}"
+	cfg.Arguments.Duration = "{prompt:Enter number of hours until upload expires or skip for permanent|}"
 
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
