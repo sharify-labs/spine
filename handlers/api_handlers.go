@@ -16,7 +16,7 @@ import (
 
 func ZephyrProxy(c echo.Context) error {
 	user := c.Get("user").(models.AuthorizedUser)
-	c.Logger().Infof("ZephyrProxy user has token: %s", user.ZephyrJWT)
+	c.Logger().Debugf("ZephyrProxy user has token: %s", user.ZephyrJWT)
 	return clients.HTTP.ForwardToZephyr(c, user.ZephyrJWT)
 }
 
@@ -27,7 +27,6 @@ func ResetToken(c echo.Context) error {
 	user := c.Get("user").(models.AuthorizedUser)
 	if token, err = services.NewZephyrToken(user.ID); err != nil {
 		// TODO: These are repeated in ProvideConfig() handler. Prob should make 1 func.
-		c.Logger().Error(err)
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
@@ -92,7 +91,6 @@ func DeleteHost(c echo.Context) error {
 
 	if host := services.NewHostFromFull(hostname, user.ID); host != nil {
 		if err := host.Delete(); err != nil {
-			c.Logger().Error(err)
 			clients.Sentry.CaptureErr(c, fmt.Errorf("error deleting host: %v", err))
 			return echo.NewHTTPError(http.StatusInternalServerError, err)
 		}
@@ -113,7 +111,6 @@ func ProvideConfig(c echo.Context) error {
 	user := c.Get("user").(models.AuthorizedUser)
 	token, err := services.NewZephyrToken(user.ID)
 	if err != nil {
-		c.Logger().Error(err)
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}

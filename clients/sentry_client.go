@@ -25,6 +25,7 @@ func (_ *sentryClient) Connect() {
 }
 
 func (_ *sentryClient) CaptureErr(c echo.Context, err error) {
+	c.Logger().Error(err)
 	if hub := sentryecho.GetHubFromContext(c); hub != nil {
 		hub.CaptureException(err)
 	}
