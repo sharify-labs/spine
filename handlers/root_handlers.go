@@ -27,22 +27,27 @@ type HostData struct {
 }
 
 func DisplayDashboard(c echo.Context) error {
-	domains, err := clients.Cloudflare.AvailableDomains()
+	availableDomains, err := clients.HTTP.GetOrFetchAvailableDomains()
 	if err != nil {
-		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+		clients.Sentry.CaptureErr(c, err)
+		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
 	user := c.Get("user").(models.AuthorizedUser)
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
-		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+		clients.Sentry.CaptureErr(c, err)
+		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
-	var hosts []HostData
+	hosts := make([]HostData, 0, len(hostnames))
 	for _, h := range hostnames {
 		hosts = append(hosts, HostData{Name: h})
+	}
+
+	domains := make([]string, 0, len(availableDomains))
+	for d := range availableDomains {
+		domains = append(domains, d)
 	}
 
 	return c.Render(

@@ -2,6 +2,8 @@ package database
 
 import (
 	"errors"
+	"fmt"
+	goccy "github.com/goccy/go-json"
 	"github.com/gofiber/storage/memory/v2"
 	"github.com/markbates/goth"
 	"github.com/sharify-labs/spine/config"
@@ -33,9 +35,45 @@ func DB() *gorm.DB {
 	return db
 }
 
-// Cache retrieves memory storage connector used for caching.
-func Cache() *memory.Storage {
-	return cache
+// GetFromCache retrieves an object from the cache.
+// If an error occurs, logs it and does not store anything in output object.
+func GetFromCache(key string, output interface{}) {
+	data, err := cache.Get(key)
+	if err != nil {
+		fmt.Printf("unable to get %s from cache: %v", key, err)
+		return
+	}
+	if data != nil {
+		err = goccy.Unmarshal(data, output)
+		if err != nil {
+			fmt.Printf("unable to unmarshal cached data for %s: %v", key, err)
+		}
+	}
+	return
+}
+
+func AddToCache(key string, data interface{}, exp time.Duration) {
+	var serialized []byte
+	var err error
+
+	switch v := data.(type) {
+	case []byte:
+		serialized = v
+	case string:
+		serialized = []byte(v)
+	default:
+		serialized, err = goccy.Marshal(data)
+		if err != nil {
+			fmt.Printf("unable to marshal data for cache key %s: %v", key, err)
+			return
+		}
+	}
+
+	err = cache.Set(key, serialized, exp)
+	if err != nil {
+		fmt.Printf("unable to cache data for key %s: %v", key, err)
+	}
+	return
 }
 
 func connectDB() {

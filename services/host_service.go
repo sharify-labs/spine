@@ -162,6 +162,7 @@ func (h *Host) removeFromDB() error {
 }
 
 // Register writes the host to the database and creates a Cloudflare CNAME entry.
+// Assumes root domain is already added to map of available domains and has an A record set in Cloudflare.
 func (h *Host) Register() error {
 	dnsRecord := h.dnsRecord()
 	// If host has subdomain -> might need to create DNS entry

@@ -16,7 +16,6 @@ import (
 
 func ZephyrProxy(c echo.Context) error {
 	user := c.Get("user").(models.AuthorizedUser)
-	c.Logger().Debugf("ZephyrProxy user has token: %s", user.ZephyrJWT)
 	return clients.HTTP.ForwardToZephyr(c, user.ZephyrJWT)
 }
 
@@ -40,10 +39,8 @@ func ResetToken(c echo.Context) error {
 }
 
 // ListAvailableDomains returns a JSON array of all available root domain names.
-// Domains are fetched from Cloudflare on each request.
-// TODO: Cache this in Redis (12-24 hours sounds reasonable)
 func ListAvailableDomains(c echo.Context) error {
-	if domains, err := clients.Cloudflare.AvailableDomains(); err != nil {
+	if domains, err := clients.HTTP.GetOrFetchAvailableDomains(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	} else {
 		return c.JSON(http.StatusOK, domains)
@@ -73,8 +70,19 @@ func CreateHost(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Hostname format must be sub.root.tld")
 	}
 
+	// Check if root domain is in list of available domains
+	availableDomains, err := clients.HTTP.GetOrFetchAvailableDomains()
+	if err != nil {
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to fetch available domains: %v", err))
+		return echo.NewHTTPError(http.StatusInternalServerError)
+	}
+	if _, ok := availableDomains[host.Root]; !ok {
+		clients.Sentry.CaptureErr(c, fmt.Errorf("user (%s) tried create host (%s) but root missing from available domains", user.ID, host.Full))
+		return echo.NewHTTPError(http.StatusInternalServerError)
+	}
+
 	// Publish host (add to Cloudflare & Database)
-	err := host.Register()
+	err = host.Register()
 	if err != nil {
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to register host(%s, %s, %s): %v", user.ID, host.Sub, host.Root, err))
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -121,7 +129,7 @@ func ProvideConfig(c echo.Context) error {
 
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
-		c.Logger().Error(err)
+		clients.Sentry.CaptureErr(c, err)
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 	switch len(hostnames) {
