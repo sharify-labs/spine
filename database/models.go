@@ -16,30 +16,36 @@ import (
 // ID: Represents the value of the storage key (SHA-512 hash).
 type StorageKey struct {
 	gorm.Model
-	ID string `gorm:"primaryKey;<-:create"` // allow read and create
+	ID string `gorm:"primaryKey;<-:create"` // allow read and create (no edit)
 }
 
 // Upload represents an upload to our app.
+// ID: Auto-incrementing integer.
+// Type: Internal type [file/image/paste/redirect] (see services.UploadType)
+// Size: Stored data size.
+// Mime: MIME string of the stored data. NULL for pastes/redirects.
+// Title: A display name for this Upload in the gallery. Defaults to filename for files/images.
+// Exp: Date and Time when the Upload expires. NULL for permanent uploads.
+// StorageKey: The key used for storing the Upload in R2 and Redis Cache.
+// Hostname: The full hostname where the Upload is served from (ex: sharify.me)
+// Secret: The secret used to view the Upload (ex: Rn1P8Zqz)
+// UserID: The User.ID of the publisher (foreign key).
 type Upload struct {
 	gorm.Model
-	ID         uint `gorm:"primaryKey;autoIncrement"`
+	ID         uint    `gorm:"primaryKey;autoincrement"`  // cannot edit
+	Type       uint8   `gorm:"not null;<-:create"`        // cannot edit
+	Size       int64   `gorm:"not null;<-:create"`        // cannot edit
+	StorageKey string  `gorm:"unique;not null;<-:create"` // cannot edit
+	Hostname   string  `gorm:"not null;<-:create"`        // cannot edit
+	Secret     string  `gorm:"not null;<-:create"`        // cannot edit
+	Mime       *string `gorm:"<-:create"`                 // cannot edit
+	Title      string
 	Exp        *time.Time
-	StorageKey string  `gorm:"unique;not null"`
-	Type       uint8   `gorm:"not null"` // internal type (file/image/paste/redirect)
-	Mime       *string // null for pastes/redirects
-	Size       int64   // file size / paste_content size / long_url size
-	Title      *string // filename / or user-provided title
-	Hostname   string  `gorm:"not null"` // ex: sharify.me
-	Secret     string  `gorm:"not null"` // ex: Rn1P8Zqz
-	UserID     string  `gorm:"index"`    // fk -> User.ID
-	User       User    // required for M-1 relationship (I think)
+	UserID     string `gorm:"index;<-:create"` // fk -> User.ID // cannot edit
+	User       User   // required for M-1 relationship (I think)
 }
 
 func (u *Upload) BeforeCreate(_ *gorm.DB) (err error) {
-	if u.Title != nil {
-		title := strings.TrimSpace(*u.Title)
-		u.Title = &title
-	}
 	u.Hostname = strings.ToLower(u.Hostname)
 	return
 }
