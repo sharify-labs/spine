@@ -36,15 +36,10 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, _ echo.Con
 }
 
 func main() {
-	// Load .env
 	if err := godotenv.Load(); err != nil {
 		panic(err)
 	}
 
-	// Initialize Sentry
-	//lib.StartSentry(version)
-
-	// Create app
 	e := echo.New()
 	e.Logger.SetLevel(log.Lvl(config.Int("LOG_LEVEL")))
 	e.IPExtractor = echo.ExtractIPFromXFFHeader() // internal IPs trusted by default
@@ -52,7 +47,6 @@ func main() {
 		templates: template.Must(template.ParseFS(assets, "assets/templates/*.html")),
 	}
 
-	// Setup Goth Auth Providers
 	goth.UseProviders(
 		discord.New(
 			config.Str("DISCORD_CLIENT_ID"),
