@@ -16,7 +16,7 @@ import (
 // ID: Represents the value of the storage key (SHA-512 hash).
 type StorageKey struct {
 	gorm.Model
-	ID string `gorm:"primaryKey;<-:create"` // allow read and create (no edit)
+	ID string `gorm:"primaryKey;<-:create"` // allow read and create
 }
 
 // Upload represents an upload to our app.
@@ -56,34 +56,19 @@ func (u *Upload) BeforeCreate(_ *gorm.DB) (err error) {
 //	"id": 1,
 //	"sub": "joe",
 //	"root": "stole-my-blow.wtf",
-//	"full": "joe.stole-my-blow.wtf"
 //	"user_id": "c99e9b2c-f04b-421e-b4a5-8120d2513b93"
 type Host struct {
 	gorm.Model
-	ID          uint `gorm:"primaryKey;autoincrement"`
-	Sub         string
-	Root        string
-	UserID      string     `gorm:"index"` // fk -> User.ID  (I don't know why but "index" tags required for fk to work)
-	User        User       // required for M-1 relationship (I think)
-	DnsRecordID string     `gorm:"index"`
-	DnsRecord   *DnsRecord // can be null if hostname has no subdomain
+	ID     uint   `gorm:"primaryKey;autoincrement"`
+	Sub    string `gorm:"<-:create"`          // cannot edit
+	Root   string `gorm:"not null;<-:create"` // cannot edit
+	UserID string `gorm:"index"`              // fk -> User.ID  (I don't know why but "index" tags required for fk to work)
+	User   User   // required for M-1 relationship (I think)
 }
 
 func (h *Host) BeforeCreate(_ *gorm.DB) (err error) {
 	h.Sub = strings.ToLower(strings.TrimSpace(h.Sub))
 	h.Root = strings.ToLower(strings.TrimSpace(h.Root))
-	return
-}
-
-type DnsRecord struct {
-	gorm.Model
-	ID       string `gorm:"primaryKey"` // DNS Record ID returned from Cloudflare API Request
-	ZoneID   string `gorm:"not null"`
-	Hostname string `gorm:"not null"`
-}
-
-func (dr *DnsRecord) BeforeCreate(_ *gorm.DB) (err error) {
-	dr.Hostname = strings.ToLower(strings.TrimSpace(dr.Hostname))
 	return
 }
 

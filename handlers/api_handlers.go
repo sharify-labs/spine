@@ -83,7 +83,7 @@ func CreateHost(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
-	// Publish host (add to Cloudflare & Database)
+	// Publish host (add to Database)
 	err = host.Register()
 	if err != nil {
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to register host(%s, %s, %s): %v", user.ID, host.Sub, host.Root, err))

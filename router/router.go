@@ -19,8 +19,8 @@ import (
 // Protected:
 // - GET     /dashboard       		-> handlers.DisplayDashboard
 // - GET     /api/v1/reset-token 	-> handlers.ResetToken
-// - GET	   /api/v1/config/:type -> handlers.ProvideConfig  // :type must be files/pastes/redirects
-// - GET	   /api/v1/domains      -> handlers.ListAvailableDomains
+// - GET	 /api/v1/config/:type -> handlers.ProvideConfig  // :type must be files/pastes/redirects
+// - GET	 /api/v1/domains      -> handlers.ListAvailableDomains
 // - GET     /api/v1/hosts        	-> handlers.ListHosts
 // - POST    /api/v1/hosts        	-> handlers.CreateHost
 // - DELETE  /api/v1/hosts/:name  	-> handlers.DeleteHost
