@@ -40,11 +40,12 @@ func ResetToken(c echo.Context) error {
 
 // ListAvailableDomains returns a JSON array of all available root domain names.
 func ListAvailableDomains(c echo.Context) error {
-	if domains, err := clients.HTTP.GetOrFetchAvailableDomains(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	} else {
-		return c.JSON(http.StatusOK, domains)
+	domains, err := clients.HTTP.GetOrFetchAvailableDomains()
+	if err != nil {
+		clients.Sentry.CaptureErr(c, err)
+		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
+	return c.JSON(http.StatusOK, domains)
 }
 
 // ListHosts returns a JSON array of all hosts registered by a given user.
@@ -52,7 +53,8 @@ func ListHosts(c echo.Context) error {
 	user := c.Get("user").(models.AuthorizedUser)
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
+		clients.Sentry.CaptureErr(c, err)
+		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 	return c.JSON(http.StatusOK, hostnames)
 }
@@ -61,13 +63,13 @@ func ListHosts(c echo.Context) error {
 // Root domain must be registered first. This can be checked with ListDomainsHandler.
 func CreateHost(c echo.Context) error {
 	sub := validators.SanitizeSubdomain(c.FormValue("subDomain"))
-	root := c.FormValue("rootDomain") // TODO: Make sure rootDomain came from the list of available domains and is not being injected some other way.
+	root := c.FormValue("rootDomain")
 	user := c.Get("user").(models.AuthorizedUser)
 
 	host := services.NewHostFromParts(sub, root, user.ID)
 	if host == nil {
 		// Hostname does not meet format requirements. Should prob be validated on frontend too.
-		return echo.NewHTTPError(http.StatusBadRequest, "Hostname format must be sub.root.tld")
+		return echo.NewHTTPError(http.StatusBadRequest, "hostname format must be sub.root.tld")
 	}
 
 	// Check if root domain is in list of available domains
@@ -88,7 +90,7 @@ func CreateHost(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
+	return c.JSON(http.StatusCreated, echo.Map{
 		"success": true, // TODO: Replace this
 	})
 }
@@ -99,13 +101,13 @@ func DeleteHost(c echo.Context) error {
 
 	if host := services.NewHostFromFull(hostname, user.ID); host != nil {
 		if err := host.Delete(); err != nil {
-			clients.Sentry.CaptureErr(c, fmt.Errorf("error deleting host: %v", err))
-			return echo.NewHTTPError(http.StatusInternalServerError, err)
+			clients.Sentry.CaptureErr(c, err)
+			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
 		return c.NoContent(http.StatusOK)
 	}
 
-	return echo.NewHTTPError(http.StatusInternalServerError, "Hostname format must be sub.root.tld")
+	return echo.NewHTTPError(http.StatusBadRequest, "hostname format must be sub.root.tld")
 }
 
 // ProvideConfig returns a ShareX config file for the user.

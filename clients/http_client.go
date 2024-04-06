@@ -82,7 +82,7 @@ func (c *httpClient) ForwardToZephyr(ctx echo.Context, userToken string) error {
 	req.Header.Set(echo.HeaderContentType, ctx.Request().Header.Get(echo.HeaderContentType))
 	for name, values := range ctx.Request().Header {
 		for _, val := range values {
-			fmt.Printf("%s: %s", name, val)
+			ctx.Logger().Debugf("Header %s: %s", name, val)
 		}
 	}
 	resp, err := c.Do(req)
