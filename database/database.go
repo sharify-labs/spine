@@ -35,9 +35,10 @@ func Setup() {
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
-				SlowThreshold: time.Second,
-				LogLevel:      logger.LogLevel(config.Int("LOG_LEVEL")),
-				Colorful:      true,
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.LogLevel(config.Int("LOG_LEVEL")),
+				Colorful:                  true,
+				IgnoreRecordNotFoundError: true,
 			},
 		),
 	})
