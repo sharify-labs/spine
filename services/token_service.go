@@ -59,14 +59,19 @@ func GenerateJWT(userID string) (string, error) {
 //   - When tokens get refreshed, the ID stays the same. Only the 'key' changes.
 //   - The key is hashed and stored. The id acts as a 'username'.
 func NewZephyrToken(userID string) (*ZephyrToken, error) {
-	var user database.User
-
 	// Get user from database
-	if err := database.DB().Clauses(clause.Locking{
+	var user database.User
+	tx := database.DB().Begin()
+	if tx.Error != nil {
+		tx.Rollback()
+		return nil, tx.Error
+	}
+	if err := tx.Clauses(clause.Locking{
 		Strength: clause.LockingStrengthUpdate,
 	}).Preload("Token").Where(&database.User{
 		ID: userID,
 	}).First(&user).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -98,10 +103,15 @@ func NewZephyrToken(userID string) (*ZephyrToken, error) {
 		Hash:   base64.RawURLEncoding.EncodeToString(hash),
 		UserID: userID,
 	}
-	err = database.DB().Clauses(clause.Locking{
+	if err = tx.Clauses(clause.Locking{
 		Strength: clause.LockingStrengthUpdate,
-	}).Save(&user).Error
-	if err != nil {
+	}).Save(&user).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err = tx.Commit().Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
