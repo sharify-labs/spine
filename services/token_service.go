@@ -22,20 +22,12 @@ type ZephyrToken struct {
 // This token is stored in the user's Cookies so that it can be used
 // to authenticate with Zephyr when uploading directly from the web panel.
 func GenerateJWT(userID string) (string, error) {
-	keyPEM, err := base64.StdEncoding.DecodeString(config.Str("JWT_PRIVATE_KEY"))
-	if err != nil {
-		return "", err
-	}
-	privateKey, err := jwt.ParseECPrivateKeyFromPEM(keyPEM)
-	if err != nil {
-		return "", err
-	}
 	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(config.SessionMaxAge)),
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		Subject:   userID,
 		Issuer:    "spine",
-	}).SignedString(privateKey)
+	}).SignedString(config.JWTPrivateKey)
 	if err != nil {
 		return "", err
 	}

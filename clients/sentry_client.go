@@ -14,7 +14,7 @@ type sentryClient struct{}
 
 func (_ *sentryClient) Connect() {
 	if err := sentry.Init(sentry.ClientOptions{
-		Dsn: config.Str("SENTRY_DSN"),
+		Dsn: config.Get[string]("SENTRY_DSN"),
 		// Set TracesSampleRate to 1.0 to capture 100%
 		// of transactions for performance monitoring.
 		// We recommend adjusting this value in production,

@@ -15,6 +15,7 @@ import (
 	"github.com/sharify-labs/spine/models"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -38,7 +39,7 @@ func Setup(e *echo.Echo, assets embed.FS) {
 			Output: os.Stdout,
 		}),
 		mw.CORSWithConfig(mw.CORSConfig{
-			AllowOrigins: config.List("ALLOW_ORIGINS"),
+			AllowOrigins: strings.Split(config.Get[string]("ALLOW_ORIGINS"), ","),
 		}),
 		mw.StaticWithConfig(mw.StaticConfig{
 			Root:       "assets/static",

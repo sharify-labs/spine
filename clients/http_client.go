@@ -78,7 +78,7 @@ func (c *httpClient) ForwardToZephyr(ctx echo.Context, userToken string) error {
 
 	req.Header.Set("User-Agent", config.UserAgent+" "+ctx.Request().UserAgent())
 	req.Header.Set(config.HeaderJWTAuth, userToken)
-	req.Header.Set(config.HeaderSpineKey, config.Str("ZEPHYR_ADMIN_KEY"))
+	req.Header.Set(config.HeaderSpineKey, config.Get[string]("ZEPHYR_ADMIN_KEY"))
 	req.Header.Set(echo.HeaderContentType, ctx.Request().Header.Get(echo.HeaderContentType))
 	for name, values := range ctx.Request().Header {
 		for _, val := range values {

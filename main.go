@@ -5,7 +5,6 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"github.com/markbates/goth"
@@ -36,12 +35,10 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, _ echo.Con
 }
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		panic(err)
-	}
+	config.Setup()
 
 	e := echo.New()
-	e.Logger.SetLevel(log.Lvl(config.Int("LOG_LEVEL")))
+	e.Logger.SetLevel(log.Lvl(config.Get[int]("LOG_LEVEL")))
 	e.IPExtractor = echo.ExtractIPFromXFFHeader() // internal IPs trusted by default
 	e.Renderer = &Template{
 		templates: template.Must(template.ParseFS(assets, "assets/templates/*.html")),
@@ -49,9 +46,9 @@ func main() {
 
 	goth.UseProviders(
 		discord.New(
-			config.Str("DISCORD_CLIENT_ID"),
-			config.Str("DISCORD_CLIENT_SECRET"),
-			config.Str("DISCORD_CALLBACK_URL"),
+			config.Get[string]("DISCORD_CLIENT_ID"),
+			config.Get[string]("DISCORD_CLIENT_SECRET"),
+			config.Get[string]("DISCORD_CALLBACK_URL"),
 			"identify", "email",
 		),
 	)
@@ -68,7 +65,7 @@ func main() {
 	// Start app
 	go func() {
 		fmt.Println("Started Spine v" + version)
-		if err := e.Start(":" + config.Str("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := e.Start(":" + config.Get[string]("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatalf("shutting down server: %v", err)
 		}
 	}()

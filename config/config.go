@@ -1,10 +1,12 @@
 package config
 
 import (
+	"crypto/ecdsa"
 	"encoding/base64"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -19,21 +21,52 @@ const (
 	SessionMaxAge = time.Hour * 24 * 7
 )
 
-// Str reads in a string variable from environment.
-// Note: Panics if value is empty.
-func Str(key string) string {
+var (
+	JWTPrivateKey *ecdsa.PrivateKey
+)
+
+// Setup reads .env and initializes values that aren't const but also shouldn't be read in from env more than once.
+func Setup() {
+	var err error
+	if err = godotenv.Load(); err != nil {
+		panic(err)
+	}
+	var jwtPem []byte
+	if jwtPem, err = base64.StdEncoding.DecodeString(Get[string]("JWT_PRIVATE_KEY")); err != nil {
+		panic("failed to decode JWT_PRIVATE_KEY")
+	}
+	if JWTPrivateKey, err = jwt.ParseECPrivateKeyFromPEM(jwtPem); err != nil {
+		panic("failed to ParseECPrivateKeyFromPEM(JWT_PRIVATE_KEY)")
+	}
+}
+
+// Get reads in a value from environment variable and returns its value as specified type.
+func Get[T any](key string) T {
 	value := os.Getenv(key)
 	if value == "" {
 		panic("missing config value for " + key)
 	}
-	return value
+	var result any
+	switch any(new(T)).(type) {
+	case *string:
+		result = value
+	case *int:
+		valueInt, err := strconv.Atoi(value)
+		if err != nil {
+			panic("invalid integer value for " + key)
+		}
+		result = valueInt
+	default:
+		panic("unsupported type")
+	}
+	return result.(T)
 }
 
 // DecodedB64 reads in a base64-encoded string from environment and decodes it.
 // Additionally, it validates that the result is the expected length.
 // Note: Panics if value is empty.
 func DecodedB64(key string, length int) []byte {
-	value, err := base64.StdEncoding.DecodeString(Str(key))
+	value, err := base64.StdEncoding.DecodeString(Get[string](key))
 	if err != nil {
 		panic(err)
 	}
@@ -41,34 +74,4 @@ func DecodedB64(key string, length int) []byte {
 		panic("base64 string for " + key + " is not expected length " + strconv.Itoa(length))
 	}
 	return value
-}
-
-// Int reads in a string variable from environment and converts it to an integer.
-// Note: Panics if value is empty.
-func Int(key string) int {
-	value, err := strconv.Atoi(Str(key))
-	if err != nil {
-		panic("invalid integer value for " + key)
-	}
-	return value
-}
-
-// Bool reads in a string variable from environment and converts it to a boolean.
-// Note: Panics if value is empty.
-func Bool(key string) bool {
-	value, err := strconv.ParseBool(Str(key))
-	if err != nil {
-		panic("invalid boolean value for " + key)
-	}
-	return value
-}
-
-// List reads in a string variable from environment and splits it where there are commas to create a list.
-// Note: Panics if value is empty.
-func List(key string) []string {
-	value := Str(key)
-	if value == "" {
-		panic("missing config value for " + key)
-	}
-	return strings.Split(value, ",")
 }

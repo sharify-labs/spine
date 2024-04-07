@@ -28,7 +28,7 @@ func Setup() {
 	var err error
 	cache = memory.New(memory.Config{GCInterval: time.Minute * 5})
 	db, err = gorm.Open(sqlite.New(sqlite.Config{
-		DSN:        config.Str("TURSO_DSN"),
+		DSN:        config.Get[string]("TURSO_DSN"),
 		DriverName: "libsql",
 	}), &gorm.Config{
 		TranslateError: true,
@@ -36,7 +36,7 @@ func Setup() {
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
 				SlowThreshold:             time.Second,
-				LogLevel:                  logger.LogLevel(config.Int("LOG_LEVEL")),
+				LogLevel:                  logger.LogLevel(config.Get[int]("LOG_LEVEL")),
 				Colorful:                  true,
 				IgnoreRecordNotFoundError: true,
 			},
