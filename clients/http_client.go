@@ -76,7 +76,7 @@ func (c *httpClient) ForwardToZephyr(ctx echo.Context, userToken string) error {
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
-	req.Header.Set("User-Agent", ctx.Request().UserAgent())
+	req.Header.Set("User-Agent", config.UserAgent+" "+ctx.Request().UserAgent())
 	req.Header.Set(config.HeaderJWTAuth, userToken)
 	req.Header.Set(config.HeaderSpineKey, config.Str("ZEPHYR_ADMIN_KEY"))
 	req.Header.Set(echo.HeaderContentType, ctx.Request().Header.Get(echo.HeaderContentType))
