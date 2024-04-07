@@ -124,7 +124,7 @@ func ProvideConfig(c echo.Context) error {
 		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
-	cfg.Headers.UploadToken = token.Value
+	cfg.Headers.Authorization = token.Value
 	// TODO: Prompt users when generating config if they want to be prompted for custom paths or upload lifetimes
 	cfg.Arguments.Secret = "{prompt:Enter custom secret or press OK to skip|}"
 	cfg.Arguments.Duration = "{prompt:Enter number of hours until upload expires or skip for permanent|}"

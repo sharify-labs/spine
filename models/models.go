@@ -20,7 +20,7 @@ type ShareXConfig struct {
 	RequestMethod   string `json:"RequestMethod"`
 	RequestURL      string `json:"RequestURL"`
 	Headers         struct {
-		UploadToken string `json:"X-Upload-Token"`
+		Authorization string `json:"Authorization"`
 	} `json:"Headers"`
 	Body      string `json:"Body"`
 	Arguments struct {
