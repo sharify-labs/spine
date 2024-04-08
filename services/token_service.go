@@ -103,7 +103,6 @@ func NewZephyrToken(userID string) (*ZephyrToken, error) {
 	}
 
 	if err = tx.Commit().Error; err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
