@@ -1,9 +1,9 @@
 .PHONY: all build clean keys lint run tidy
 PROJECT='spine'
 
-all: build
+all: tidy lint build
 
-build: clean tidy
+build: clean
 	@echo "Building ${PROJECT}"
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=dev" -o bin/${PROJECT}-dev.bin .
 
