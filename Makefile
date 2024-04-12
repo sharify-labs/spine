@@ -1,14 +1,14 @@
-.PHONY: clean build run
+.PHONY: all build clean keys lint run tidy
 PROJECT='spine'
 
 all: build
 
-build: clean
+build: clean tidy
 	@echo "Building ${PROJECT}"
-	CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=dev" -o bin/${PROJECT}-dev.bin .
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=dev" -o bin/${PROJECT}-dev.bin .
 
 clean:
-	@rm -rf ./bin
+	rm -rf ./bin
 
 keys:
 	@echo "Generating keys..."
@@ -26,5 +26,11 @@ keys:
 	@rm -f admin-key.bin
 	@echo "Keys generated and saved to .env"
 
+lint:
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2 run ./...
+
 run: build
 	./bin/${PROJECT}-dev.bin
+
+tidy:
+	go mod tidy -v
