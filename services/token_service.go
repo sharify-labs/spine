@@ -78,9 +78,9 @@ func NewZephyrToken(userID string) (*ZephyrToken, error) {
 			tokenID, err = base64.RawURLEncoding.DecodeString(user.Token.ID)
 		} else {
 			tokenID, err = GenerateRandomBytes(8)
-			if err != nil {
-				return nil, err
-			}
+		}
+		if err != nil {
+			return nil, err
 		}
 
 		// Generate token key

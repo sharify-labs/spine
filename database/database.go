@@ -67,11 +67,9 @@ func AddToCache(key string, data interface{}, exp time.Duration) {
 			return
 		}
 	}
-	err = cache.Set(key, serialized, exp)
-	if err != nil {
+	if err = cache.Set(key, serialized, exp); err != nil {
 		fmt.Printf("unable to cache data for key %s: %v", key, err)
 	}
-	return
 }
 
 // GetFromCache retrieves an object from the cache.
@@ -83,12 +81,10 @@ func GetFromCache(key string, output interface{}) {
 		return
 	}
 	if data != nil {
-		err = goccy.Unmarshal(data, output)
-		if err != nil {
+		if err = goccy.Unmarshal(data, output); err != nil {
 			fmt.Printf("unable to unmarshal cached data for %s: %v", key, err)
 		}
 	}
-	return
 }
 
 func GetAllHostnames(userID string) ([]string, error) {
