@@ -1,6 +1,8 @@
 .PHONY: all build clean keys lint run tidy
 PROJECT='spine'
 
+.PHONY: all build clean lint run tidy
+
 all: tidy lint build
 
 build: clean
@@ -8,7 +10,7 @@ build: clean
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=dev" -o bin/${PROJECT}-dev.bin .
 
 clean:
-	rm -rf ./bin
+	@rm -rf ./bin
 
 keys:
 	@echo "Generating keys..."
@@ -33,4 +35,5 @@ run: build
 	./bin/${PROJECT}-dev.bin
 
 tidy:
-	go mod tidy -v
+	@go mod tidy -v
+	@go run mvdan.cc/gofumpt@latest -w -l .
