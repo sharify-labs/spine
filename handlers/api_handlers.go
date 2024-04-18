@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	goccy "github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
 	"github.com/sharify-labs/spine/clients"
@@ -10,12 +13,22 @@ import (
 	"github.com/sharify-labs/spine/models"
 	"github.com/sharify-labs/spine/services"
 	"github.com/sharify-labs/spine/validators"
-	"net/http"
-	"strings"
 )
 
+func getUserFromCtx(c echo.Context) (*models.AuthorizedUser, error) {
+	user, ok := c.Get("user").(models.AuthorizedUser)
+	if !ok {
+		c.Logger().Warnf("failed getting user from session")
+		return nil, echo.NewHTTPError(http.StatusUnauthorized)
+	}
+	return &user, nil
+}
+
 func ZephyrProxy(c echo.Context) error {
-	user := c.Get("user").(models.AuthorizedUser)
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
 	return clients.HTTP.ForwardToZephyr(c, user.ZephyrJWT)
 }
 
@@ -23,10 +36,14 @@ func ResetToken(c echo.Context) error {
 	var token *services.ZephyrToken
 	var err error
 
-	user := c.Get("user").(models.AuthorizedUser)
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
+
 	if token, err = services.NewZephyrToken(user.ID); err != nil {
 		// TODO: These are repeated in ProvideConfig() handler. Prob should make 1 func.
-		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %w", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
@@ -40,7 +57,7 @@ func ResetToken(c echo.Context) error {
 
 // ListAvailableDomains returns a JSON array of all available root domain names.
 func ListAvailableDomains(c echo.Context) error {
-	domains, err := clients.HTTP.GetOrFetchAvailableDomains()
+	domains, err := clients.HTTP.GetOrFetchAvailableDomains(c)
 	if err != nil {
 		clients.Sentry.CaptureErr(c, err)
 		return echo.NewHTTPError(http.StatusInternalServerError)
@@ -50,7 +67,10 @@ func ListAvailableDomains(c echo.Context) error {
 
 // ListHosts returns a JSON array of all hosts registered by a given user.
 func ListHosts(c echo.Context) error {
-	user := c.Get("user").(models.AuthorizedUser)
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
 		clients.Sentry.CaptureErr(c, err)
@@ -64,7 +84,11 @@ func ListHosts(c echo.Context) error {
 func CreateHost(c echo.Context) error {
 	sub := validators.SanitizeSubdomain(c.FormValue("subDomain"))
 	root := c.FormValue("rootDomain")
-	user := c.Get("user").(models.AuthorizedUser)
+
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
 
 	host := services.NewHostFromParts(sub, root, user.ID)
 	if host == nil {
@@ -73,20 +97,20 @@ func CreateHost(c echo.Context) error {
 	}
 
 	// Check if root domain is in list of available domains
-	availableDomains, err := clients.HTTP.GetOrFetchAvailableDomains()
+	availableDomains, err := clients.HTTP.GetOrFetchAvailableDomains(c)
 	if err != nil {
-		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to fetch available domains: %v", err))
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to fetch available domains: %w", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 	if _, ok := availableDomains[host.Root]; !ok {
-		clients.Sentry.CaptureErr(c, fmt.Errorf("user (%s) tried create host (%s) but root missing from available domains", user.ID, host.Full))
+		clients.Sentry.CaptureErr(c, fmt.Errorf("(%s) tried create host (%s) but root missing", user.ID, host.Full))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
 	// Publish host (add to Database)
 	err = host.Register()
 	if err != nil {
-		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to register host(%s, %s, %s): %v", user.ID, host.Sub, host.Root, err))
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to register host(%s, %s, %s): %w", user.ID, host.Sub, host.Root, err))
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
@@ -97,10 +121,14 @@ func CreateHost(c echo.Context) error {
 
 func DeleteHost(c echo.Context) error {
 	hostname := c.Param("name")
-	user := c.Get("user").(models.AuthorizedUser)
+
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
 
 	if host := services.NewHostFromFull(hostname, user.ID); host != nil {
-		if err := host.Delete(); err != nil {
+		if err = host.Delete(); err != nil {
 			clients.Sentry.CaptureErr(c, err)
 			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
@@ -118,10 +146,14 @@ func ProvideConfig(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
 
-	user := c.Get("user").(models.AuthorizedUser)
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
+
 	token, err := services.NewZephyrToken(user.ID)
 	if err != nil {
-		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %v", err))
+		clients.Sentry.CaptureErr(c, fmt.Errorf("failed to generate zephyr token: %w", err))
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 	cfg.Headers.Authorization = token.Value

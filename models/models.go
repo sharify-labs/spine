@@ -55,19 +55,19 @@ var mapStrToShareXConfigDetails = map[string]ShareXConfigDetails{
 
 // NewShareXConfig creates a ShareXConfig with default values.
 func NewShareXConfig(t string) *ShareXConfig {
-	if uType, exists := mapStrToShareXConfigDetails[t]; !exists {
+	uType, exists := mapStrToShareXConfigDetails[t]
+	if !exists {
 		return nil
-	} else {
-		return &ShareXConfig{
-			Version:         "16.0.1",
-			Name:            "Sharify",
-			DestinationType: uType.DestinationType,
-			RequestMethod:   "POST",
-			RequestURL:      "https://xericl.dev/api/v1/uploads",
-			Body:            "MultipartFormData",
-			FileFormName:    uType.FileFormName,
-			URL:             "{json:url}",
-			ErrorMessage:    "{json:message}",
-		}
+	}
+	return &ShareXConfig{
+		Version:         "16.0.1",
+		Name:            "Sharify",
+		DestinationType: uType.DestinationType,
+		RequestMethod:   "POST",
+		RequestURL:      "https://xericl.dev/api/v1/uploads",
+		Body:            "MultipartFormData",
+		FileFormName:    uType.FileFormName,
+		URL:             "{json:url}",
+		ErrorMessage:    "{json:message}",
 	}
 }

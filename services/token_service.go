@@ -5,11 +5,12 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/database"
 	"gorm.io/gorm/clause"
-	"time"
 )
 
 const zephyrTokenPrefix string = "sfy"
@@ -22,16 +23,12 @@ type ZephyrToken struct {
 // This token is stored in the user's Cookies so that it can be used
 // to authenticate with Zephyr when uploading directly from the web panel.
 func GenerateJWT(userID string) (string, error) {
-	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.RegisteredClaims{
+	return jwt.NewWithClaims(jwt.SigningMethodES256, &jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(config.SessionMaxAge)),
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		Subject:   userID,
 		Issuer:    "spine",
 	}).SignedString(config.JWTPrivateKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenStr, err
 }
 
 // NewZephyrToken generates a new upload token and stores it in the database.
@@ -53,71 +50,72 @@ func GenerateJWT(userID string) (string, error) {
 func NewZephyrToken(userID string) (*ZephyrToken, error) {
 	// Get user from database
 	var user database.User
-	if tx := database.DB().Begin(); tx.Error != nil {
+	tx := database.DB().Begin()
+	if tx.Error != nil {
 		tx.Rollback()
 		return nil, tx.Error
-	} else {
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback() // Rollback on panic
-			}
-		}()
-		if err := tx.Clauses(clause.Locking{
-			Strength: clause.LockingStrengthUpdate,
-		}).Preload("Token").Where(&database.User{
-			ID: userID,
-		}).First(&user).Error; err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-
-		// Check if user has existing token
-		var err error
-		var tokenID []byte
-		if user.Token != nil {
-			tokenID, err = base64.RawURLEncoding.DecodeString(user.Token.ID)
-		} else {
-			tokenID, err = GenerateRandomBytes(8)
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		// Generate token key
-		key, err := GenerateRandomBytes(32)
-		if err != nil {
-			return nil, err
-		}
-		hash, err := Hash(key)
-		if err != nil {
-			return nil, err
-		}
-
-		// Store in database
-		user.Token = &database.Token{
-			ID:     base64.RawURLEncoding.EncodeToString(tokenID),
-			Hash:   base64.RawURLEncoding.EncodeToString(hash),
-			UserID: userID,
-		}
-		if err = tx.Clauses(clause.Locking{
-			Strength: clause.LockingStrengthUpdate,
-		}).Save(&user).Error; err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-		if err = tx.Commit().Error; err != nil {
-			return nil, err
-		}
-		// Combine prefix, id, and key, seperated by underscores and return to user.
-		// Example: sfy_3c9c0fe69b72b2c1_734c5c796877fb00f2fc31d024c62f12302367f08338dc35113b42eef7be7fd3
-		return &ZephyrToken{
-			Value: zephyrTokenPrefix + "_" + hex.EncodeToString(tokenID) + "_" + hex.EncodeToString(key),
-		}, nil
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // Rollback on panic
+		}
+	}()
+
+	if err := tx.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthUpdate,
+	}).Preload("Token").Where(&database.User{
+		ID: userID,
+	}).First(&user).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Check if user has existing token
+	var err error
+	var tokenID []byte
+	if user.Token != nil {
+		tokenID, err = base64.RawURLEncoding.DecodeString(user.Token.ID)
+	} else {
+		tokenID, err = GenerateRandomBytes(8)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate token key
+	key, err := GenerateRandomBytes(32)
+	if err != nil {
+		return nil, err
+	}
+	hash, err := Hash(key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in database
+	user.Token = &database.Token{
+		ID:     base64.RawURLEncoding.EncodeToString(tokenID),
+		Hash:   base64.RawURLEncoding.EncodeToString(hash),
+		UserID: userID,
+	}
+	if err = tx.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthUpdate,
+	}).Save(&user).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err = tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	// Combine prefix, id, and key, seperated by underscores and return to user.
+	// Example: sfy_3c9c0fe69b72b2c1_734c5c796877fb00f2fc31d024c62f12302367f08338dc35113b42eef7be7fd3
+	return &ZephyrToken{
+		Value: zephyrTokenPrefix + "_" + hex.EncodeToString(tokenID) + "_" + hex.EncodeToString(key),
+	}, nil
 }
 
 // GenerateRandomBytes generates a byte array with given length
-// randomly and securely using CSPRNG in the crypto/rand package
+// randomly and securely using CSPRNG in the crypto/rand package.
 func GenerateRandomBytes(length int) ([]byte, error) {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {

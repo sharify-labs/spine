@@ -1,24 +1,25 @@
 package database
 
 import (
-	"fmt"
-	goccy "github.com/goccy/go-json"
-	"github.com/gofiber/storage/memory/v2"
-	"github.com/markbates/goth"
-	"github.com/sharify-labs/spine/config"
-	_ "github.com/tursodatabase/libsql-client-go/libsql"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	goccy "github.com/goccy/go-json"
+	"github.com/gofiber/storage/memory/v2"
+	echolog "github.com/labstack/gommon/log"
+	"github.com/markbates/goth"
+	"github.com/sharify-labs/spine/config"
+	_ "github.com/tursodatabase/libsql-client-go/libsql" // turso
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
-// cache local memory storage connector
-// db SQL gorm connector
+// cache local memory storage connector.
+// db SQL gorm connector.
 var (
 	cache *memory.Storage
 	db    *gorm.DB
@@ -63,12 +64,12 @@ func AddToCache(key string, data interface{}, exp time.Duration) {
 	default:
 		serialized, err = goccy.Marshal(data)
 		if err != nil {
-			fmt.Printf("unable to marshal data for cache key %s: %v", key, err)
+			echolog.Errorf("unable to marshal data for cache key %s: %v", key, err)
 			return
 		}
 	}
 	if err = cache.Set(key, serialized, exp); err != nil {
-		fmt.Printf("unable to cache data for key %s: %v", key, err)
+		echolog.Errorf("unable to cache data for key %s: %v", key, err)
 	}
 }
 
@@ -77,12 +78,12 @@ func AddToCache(key string, data interface{}, exp time.Duration) {
 func GetFromCache(key string, output interface{}) {
 	data, err := cache.Get(key)
 	if err != nil {
-		fmt.Printf("unable to get %s from cache: %v", key, err)
+		echolog.Errorf("unable to get %s from cache: %v", key, err)
 		return
 	}
 	if data != nil {
 		if err = goccy.Unmarshal(data, output); err != nil {
-			fmt.Printf("unable to unmarshal cached data for %s: %v", key, err)
+			echolog.Warnf("unable to unmarshal cached data for %s: %v", key, err)
 		}
 	}
 }

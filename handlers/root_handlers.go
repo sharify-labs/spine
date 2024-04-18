@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/database"
-	"github.com/sharify-labs/spine/models"
-	"net/http"
 )
 
 func Root(c echo.Context) error {
@@ -27,13 +27,16 @@ type HostData struct {
 }
 
 func DisplayDashboard(c echo.Context) error {
-	availableDomains, err := clients.HTTP.GetOrFetchAvailableDomains()
+	availableDomains, err := clients.HTTP.GetOrFetchAvailableDomains(c)
 	if err != nil {
 		clients.Sentry.CaptureErr(c, err)
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 
-	user := c.Get("user").(models.AuthorizedUser)
+	user, err := getUserFromCtx(c)
+	if err != nil {
+		return err
+	}
 	hostnames, err := database.GetAllHostnames(user.ID)
 	if err != nil {
 		clients.Sentry.CaptureErr(c, err)

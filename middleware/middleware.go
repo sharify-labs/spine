@@ -4,6 +4,11 @@ import (
 	"embed"
 	"encoding/gob"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -13,10 +18,6 @@ import (
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/models"
-	"net/http"
-	"os"
-	"strings"
-	"time"
 )
 
 func Setup(e *echo.Echo, assets embed.FS) {
@@ -58,7 +59,7 @@ func RequireSession(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sess, err := session.Get("session", c)
 		if err != nil {
-			clients.Sentry.CaptureErr(c, fmt.Errorf("unable to get session: %v", err))
+			clients.Sentry.CaptureErr(c, fmt.Errorf("unable to get session: %w", err))
 			return c.Redirect(http.StatusFound, "/login")
 		}
 		if user, ok := sess.Values["auth_user"].(models.AuthorizedUser); ok {

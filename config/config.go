@@ -3,11 +3,12 @@ package config
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -17,13 +18,12 @@ const (
 	ZephyrURL      string = "xericl.dev"
 	UserAgent      string = "sharify-labs/spine"
 )
+
 const (
 	SessionMaxAge = time.Hour * 24 * 7
 )
 
-var (
-	JWTPrivateKey *ecdsa.PrivateKey
-)
+var JWTPrivateKey *ecdsa.PrivateKey
 
 // Setup reads .env and initializes values that aren't const but also shouldn't be read in from env more than once.
 func Setup() {

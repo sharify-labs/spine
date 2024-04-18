@@ -5,7 +5,7 @@ import (
 	"unicode"
 )
 
-// firstNChars returns the first n number of characters from a string
+// firstNChars returns the first n number of characters from a string.
 func firstNChars(s string, n int) string {
 	runes := []rune(s)
 	if len(runes) > n {

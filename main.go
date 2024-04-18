@@ -4,7 +4,13 @@ import (
 	"context"
 	"embed"
 	"errors"
-	"fmt"
+	"html/template"
+	"io"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"github.com/markbates/goth"
@@ -14,12 +20,6 @@ import (
 	"github.com/sharify-labs/spine/database"
 	"github.com/sharify-labs/spine/middleware"
 	"github.com/sharify-labs/spine/router"
-	"html/template"
-	"io"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 )
 
 //go:embed assets/*
@@ -64,7 +64,7 @@ func main() {
 
 	// Start app
 	go func() {
-		fmt.Println("Started Spine v" + version)
+		e.Logger.Infof("Started Spine %s", version)
 		if err := e.Start(":" + config.Get[string]("PORT")); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatalf("shutting down server: %v", err)
 		}

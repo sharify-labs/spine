@@ -1,10 +1,11 @@
 package database
 
 import (
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // StorageKey represents a used R2 key.
@@ -45,7 +46,7 @@ type Upload struct {
 	User       User   // required for M-1 relationship (I think)
 }
 
-func (u *Upload) BeforeCreate(_ *gorm.DB) (err error) {
+func (u *Upload) BeforeCreate(_ *gorm.DB) (_ error) {
 	u.Hostname = strings.ToLower(u.Hostname)
 	return
 }
@@ -95,7 +96,7 @@ type User struct {
 	Uploads   []Upload
 }
 
-func (u *User) BeforeCreate(_ *gorm.DB) (err error) {
+func (u *User) BeforeCreate(_ *gorm.DB) (_ error) {
 	u.ID = uuid.NewString()
 	u.Email = strings.ToLower(strings.TrimSpace(u.Email))
 	return

@@ -28,7 +28,7 @@ keys:
 	@rm -f admin-key.bin
 	@echo "Keys generated and saved to .env"
 
-lint:
+lint: tidy
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2 run ./...
 
 run: build

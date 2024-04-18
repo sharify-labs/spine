@@ -1,9 +1,10 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/sharify-labs/spine/database"
 	"gorm.io/gorm/clause"
-	"strings"
 )
 
 // Host helps parse a hostname string into a usable "object".
@@ -25,7 +26,7 @@ func JoinHostname(sub string, root string) string {
 // NewHostFromFull takes in a full hostname and userID and returns a Host object.
 // - Assumes the hostname is pre-validated and sanitized.
 // - We only support 1st-level subdomains. We do not need to consider subs with multiple periods.
-// - We only support TLDs with 1 period (ex: .co.uk is not supported)
+// - We only support TLDs with 1 period (ex: .co.uk is not supported).
 func NewHostFromFull(hostname string, userID string) *Host {
 	parts := strings.Split(hostname, ".")
 	var sub, root string

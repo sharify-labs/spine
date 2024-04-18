@@ -1,10 +1,10 @@
 package clients
 
 import (
-	"fmt"
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/labstack/echo/v4"
+	echolog "github.com/labstack/gommon/log"
 	"github.com/sharify-labs/spine/config"
 )
 
@@ -12,7 +12,7 @@ var Sentry = &sentryClient{}
 
 type sentryClient struct{}
 
-func (_ *sentryClient) Connect() {
+func (*sentryClient) Connect() {
 	if err := sentry.Init(sentry.ClientOptions{
 		Dsn: config.Get[string]("SENTRY_DSN"),
 		// Set TracesSampleRate to 1.0 to capture 100%
@@ -20,11 +20,11 @@ func (_ *sentryClient) Connect() {
 		// We recommend adjusting this value in production,
 		TracesSampleRate: 1.0,
 	}); err != nil {
-		fmt.Printf("Sentry initialization failed: %v", err)
+		echolog.Warnf("Sentry initialization failed: %v", err)
 	}
 }
 
-func (_ *sentryClient) CaptureErr(c echo.Context, err error) {
+func (*sentryClient) CaptureErr(c echo.Context, err error) {
 	c.Logger().Error(err)
 	if hub := sentryecho.GetHubFromContext(c); hub != nil {
 		hub.CaptureException(err)
