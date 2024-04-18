@@ -1,9 +1,24 @@
 package router
 
 import (
+	"embed"
+	"encoding/gob"
+	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	sentryecho "github.com/getsentry/sentry-go/echo"
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	mw "github.com/labstack/echo/v4/middleware"
+	"github.com/markbates/goth/gothic"
+	"github.com/sharify-labs/spine/clients"
+	"github.com/sharify-labs/spine/config"
 	h "github.com/sharify-labs/spine/handlers"
-	mw "github.com/sharify-labs/spine/middleware"
+	"github.com/sharify-labs/spine/models"
 )
 
 // Setup initializes all routes:
@@ -38,12 +53,42 @@ import (
 //   - POST /api/v1/uploads
 //
 //   - DELETE /api/v1/uploads
-func Setup(e *echo.Echo) {
-	// Root routes
+func Setup(e *echo.Echo, assets embed.FS) {
+	// Init Gothic for oAuth2
+	sessStore := sessions.NewCookieStore(
+		config.DecodedB64("SESSION_AUTH_KEY_64", 64),
+		config.DecodedB64("SESSION_ENC_KEY_32", 32),
+	)
+	sessStore.MaxAge(int(config.SessionMaxAge.Seconds()))
+	gothic.Store = sessStore
+	gob.Register(models.AuthorizedUser{})
+
+	// Init middleware
+	e.Use(
+		mw.Secure(),
+		mw.Recover(),
+		mw.BodyLimit("100M"),
+		mw.LoggerWithConfig(mw.LoggerConfig{
+			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${remote_ip}) ${latency_human}\n",
+			Output: os.Stdout,
+		}),
+		mw.CORSWithConfig(mw.CORSConfig{
+			AllowOrigins: strings.Split(config.Get[string]("ALLOW_ORIGINS"), ","),
+		}),
+		mw.StaticWithConfig(mw.StaticConfig{
+			Root:       "assets/static",
+			Filesystem: http.FS(assets),
+		}),
+		sentryecho.New(sentryecho.Options{
+			Timeout: 3 * time.Second,
+			Repanic: true,
+		}),
+		session.Middleware(sessStore),
+	)
+
 	e.GET("", h.Root)
 	e.GET("/login", h.Login)
 
-	// Auth routes
 	auth := e.Group("/auth")
 	{
 		auth.GET("/discord", h.DiscordAuth)
@@ -51,8 +96,8 @@ func Setup(e *echo.Echo) {
 	}
 
 	// Protected routes
-	e.GET("/dashboard", h.DisplayDashboard, mw.RequireSession)
-	api := e.Group("/api", mw.RequireSession)
+	e.GET("/dashboard", h.DisplayDashboard, requireSession)
+	api := e.Group("/api", requireSession)
 	{
 		v1 := api.Group("/v1")
 		{
@@ -68,5 +113,21 @@ func Setup(e *echo.Echo) {
 			v1.POST("/uploads", h.ZephyrProxy)
 			v1.DELETE("/uploads", h.ZephyrProxy)
 		}
+	}
+}
+
+// requireSession is a middleware that checks if the user is logged in.
+func requireSession(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sess, err := session.Get("session", c)
+		if err != nil {
+			clients.Sentry.CaptureErr(c, fmt.Errorf("unable to get session: %w", err))
+			return c.Redirect(http.StatusFound, "/login")
+		}
+		if user, ok := sess.Values["auth_user"].(models.AuthorizedUser); ok {
+			c.Set("user", user)
+			return next(c)
+		}
+		return c.Redirect(http.StatusFound, "/login")
 	}
 }

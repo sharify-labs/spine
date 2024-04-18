@@ -18,7 +18,6 @@ import (
 	"github.com/sharify-labs/spine/clients"
 	"github.com/sharify-labs/spine/config"
 	"github.com/sharify-labs/spine/database"
-	"github.com/sharify-labs/spine/middleware"
 	"github.com/sharify-labs/spine/router"
 )
 
@@ -55,8 +54,7 @@ func main() {
 
 	clients.Setup()
 	database.Setup()
-	middleware.Setup(e, assets)
-	router.Setup(e)
+	router.Setup(e, assets)
 
 	// Setup graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
