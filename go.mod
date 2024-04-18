@@ -1,6 +1,6 @@
 module github.com/sharify-labs/spine
 
-go 1.22
+go 1.22.2
 
 require (
 	github.com/getsentry/sentry-go v0.27.0
