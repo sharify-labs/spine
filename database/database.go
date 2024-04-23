@@ -12,7 +12,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/sharify-labs/spine/config"
 	_ "github.com/tursodatabase/libsql-client-go/libsql" // turso
-	"gorm.io/driver/sqlite"
+	sqlite "github.com/ytsruh/gorm-libsql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
@@ -29,8 +29,7 @@ func Setup() {
 	var err error
 	cache = memory.New(memory.Config{GCInterval: time.Minute * 5})
 	db, err = gorm.Open(sqlite.New(sqlite.Config{
-		DSN:        config.Get[string]("TURSO_DSN"),
-		DriverName: "libsql",
+		DSN: config.Get[string]("TURSO_DSN"),
 	}), &gorm.Config{
 		TranslateError: true,
 		Logger: logger.New(

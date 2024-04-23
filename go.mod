@@ -10,12 +10,12 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.2.2
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo-contrib v0.17.0
+	github.com/labstack/echo-contrib v0.17.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
 	github.com/markbates/goth v1.79.0
 	github.com/tursodatabase/libsql-client-go v0.0.0-20240416075003-747366ff79c4
-	gorm.io/driver/sqlite v1.5.5
+	github.com/ytsruh/gorm-libsql v0.1.2
 	gorm.io/gorm v1.25.9
 )
 
@@ -43,5 +43,3 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	nhooyr.io/websocket v1.8.11 // indirect
 )
-
-replace gorm.io/driver/sqlite => ../../forks/sqlite
